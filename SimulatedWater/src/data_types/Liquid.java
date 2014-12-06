@@ -3,11 +3,13 @@ package data_types;
 import java.util.Random;
 import java.util.Vector;
 
+import marching_cubes.MCCube;
 import marching_cubes.MCGrid;
 
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
+import Utils.Debug;
 import de.lessvoid.nifty.controls.slider.builder.SliderBuilder;
 
 /**
@@ -60,6 +62,7 @@ public class Liquid {
 		mParticleList = new Vector<Particle>();
 		mBoundaries = new Boundaries(size);
 		mMCGrid = new MCGrid(size,gridScale,isoLevel);
+		
 		init();
 	}
 	
@@ -86,6 +89,10 @@ public class Liquid {
 		}
 		//Update the ScalarField
 		mMCGrid.update();
+		
+//		MCCube cube = mMCGrid.getCubes().get(555);
+//		Debug.println("Number of neighbours "+ cube.getNeighbours().size(),Debug.MAX_DEBUG);
+//		Debug.println("Number of cubes "+cube.getCubesInRange(4).size(),Debug.MAX_DEBUG);
 	}
 	
 	public Particle getParticle(int particleID){

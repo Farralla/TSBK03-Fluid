@@ -43,12 +43,12 @@ public class MCGrid {
 		
 		int id = 0;
 		for(int x = 0; x < numBoxes;x++){
+			float xPos = MathUtils.toDecimals(x*scale + scale/2,4);
 			for(int y = 0; y < numBoxes;y++){
+				float yPos = MathUtils.toDecimals(y*scale + scale/2,4);
 				for(int z = 0; z < numBoxes;z++){
-					Vector3f pos = new Vector3f(
-							MathUtils.toDecimals(x*scale, 3),
-							MathUtils.toDecimals(y*scale, 3),
-							MathUtils.toDecimals(z*scale, 3));
+					float zPos = MathUtils.toDecimals(z*scale + scale/2,4);
+					Vector3f pos = new Vector3f(xPos,yPos,zPos);
 					mCubes.add(new MCCube(pos,scale,id));
 					id++;
 				}

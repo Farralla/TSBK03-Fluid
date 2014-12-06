@@ -258,7 +258,37 @@ public final class MathUtils {
 	 */
 	public static float toDecimals(float in,int n){
 		float temp = (float) Math.pow(10, n);
-		return (float) (Math.ceil(in*temp)/temp);
+		return (float) (Math.round(in*temp)/temp);
+	}
+	
+	/**
+	 * Convert the input vectorin to decimal count n
+	 * @param in input float to decimate
+	 * @param n number of decimals
+	 * @return float with n number of decimals
+	 */
+	public static Vector3f toDecimals(Vector3f in,int n){
+		float temp = (float) Math.pow(10, n);
+		in.x = (float) (Math.round(in.x*temp)/temp);
+		in.y = (float) (Math.round(in.y*temp)/temp);
+		in.z = (float) (Math.round(in.z*temp)/temp);
+		return in;
+	}
+	
+	/**
+	 * Convert the input vectorin to decimal count n
+	 * @param in input float to decimate
+	 * @param n number of decimals
+	 * @return float with n number of decimals
+	 */
+	public static boolean isEqual(Vector3f v1, Vector3f v2){
+		if(v1.x == v2.x && v1.y == v2.y && v1.z == v2.z){
+			return true;
+		}
+		else{
+			return false;
+		}
+
 	}
 	
 }
