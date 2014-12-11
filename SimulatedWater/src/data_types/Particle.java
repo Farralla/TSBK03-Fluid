@@ -3,7 +3,9 @@ package data_types;
 import static org.lwjgl.util.vector.Vector3f.sub;
 
 import java.util.Vector;
+
 import marching_cubes.MCCube;
+import marching_cubes.MCVoxel;
 
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
@@ -53,7 +55,7 @@ public class Particle {
 	private float mRho; // Initial density
 	private float mH; // radius of influence
 	private float mEta; // Viscosity constant
-	private static final float g = 2.5f; // Gravity
+	private static final float g = 4.5f; // Gravity
 	private float mSigma; // colorfield constant
 	private float mCFThresh; // colorfield gradient length threshold
 
@@ -242,15 +244,24 @@ public class Particle {
 
 	public void updateNearbyCubes() {
 		Vector<MCCube> nearbyCubes = mInCube.getCubesInRange(5);
+		Vector<MCVoxel> updatedVoxels = new Vector<MCVoxel>();
+		
+		
 		for (MCCube cube : nearbyCubes) {
-
 			for (int i = 0; i < 8; i++) {
+				if(updatedVoxels.contains(cube.getVoxel(i)))
+					continue;
+				else
+					updatedVoxels.add(cube.getVoxel(i));
+				
 				Vector3f rvec = Vector3f.sub(mPosition, cube.getPosition(i), null);
 				if (rvec.length() < mH) {
 					cube.addToValue(i, 0.00001f * mDensity * mKernel.W_poly6(rvec));
 				}
 			}
 		}
+		nearbyCubes.clear();
+		updatedVoxels.clear();
 
 	}
 
@@ -274,21 +285,17 @@ public class Particle {
 	 * Determine which cube the particle is in from particle position Loops
 	 * through all cubes
 	 * 
-	 * @param vector
-	 *            Vector of all cubes
+	 * @param vector Vector of all cubes
 	 * @return cube which the particle is in
 	 */
-	public MCCube initialInCube(Vector<MCCube> vector) {
-		MCCube resultCube = null;
+	public void initialInCube(Vector<MCCube> vector) {
 		for (MCCube cube : vector) {
 			if (cube.containsParticle(this)) {
-				resultCube = cube;
 				mInCube = cube;
-				resultCube.addParticle(this);
+				cube.addParticle(this);
 				break;
 			}
 		}
-		return resultCube;
 	}
 
 	/**
@@ -311,6 +318,7 @@ public class Particle {
 					break;
 				}
 			}
+			nearbyCubes.clear();
 		}
 	}
 
@@ -414,19 +422,37 @@ public class Particle {
 	private void checkBoundaries(Liquid liquid) {
 		Boundaries b = liquid.getBoundaries();
 		float k = 0.9f;
-		if (mPosition.x < b.xLow) {
-			mPosition.x = b.xLow;
-			mVelocity.x = -k * mVelocity.x;
-			float kV = 1 - mVelocity.length() * 0.5f;
-			mVelocity.scale(kV);
-			mForce.x = 1000f;
-		}
-		else if (mPosition.x > b.xHigh) {
-			mPosition.x = b.xHigh;
-			mVelocity.x = -k * mVelocity.x;
-			float kV = 1 - mVelocity.length() * 0.5f;
-			mVelocity.scale(kV);
-			mForce.x = -1000f;
+		if(b.isSideConstraintsOn())
+		{
+			if (mPosition.x < b.xLow) {
+				mPosition.x = b.xLow;
+				mVelocity.x = -k * mVelocity.x;
+				float kV = 1 - mVelocity.length() * 0.5f;
+				mVelocity.scale(kV);
+				mForce.x = 1000f;
+			}
+			else if (mPosition.x > b.xHigh) {
+				mPosition.x = b.xHigh;
+				mVelocity.x = -k * mVelocity.x;
+				float kV = 1 - mVelocity.length() * 0.5f;
+				mVelocity.scale(kV);
+				mForce.x = -1000f;
+			}
+			
+			if (mPosition.z < b.zLow) {
+				mPosition.z = b.zLow;
+				mVelocity.z = -k * mVelocity.z;
+				float kV = 1 - mVelocity.length() * 0.5f;
+				mVelocity.scale(kV);
+				mForce.z = 1000f;
+			}
+			else if (mPosition.z > b.zHigh) {
+				mPosition.z = b.zHigh;
+				mVelocity.z = -k * mVelocity.z;
+				float kV = 1 - mVelocity.length() * 0.5f;
+				mVelocity.scale(kV);
+				mForce.z = -1000f;
+			}
 		}
 
 		if (mPosition.y < b.yLow) {
@@ -443,21 +469,6 @@ public class Particle {
 			float kV = 1 - mVelocity.length() * 0.5f;
 			mVelocity.scale(kV);
 			mForce.y = -1000f;
-		}
-
-		if (mPosition.z < b.zLow) {
-			mPosition.z = b.zLow;
-			mVelocity.z = -k * mVelocity.z;
-			float kV = 1 - mVelocity.length() * 0.5f;
-			mVelocity.scale(kV);
-			mForce.z = 1000f;
-		}
-		else if (mPosition.z > b.zHigh) {
-			mPosition.z = b.zHigh;
-			mVelocity.z = -k * mVelocity.z;
-			float kV = 1 - mVelocity.length() * 0.5f;
-			mVelocity.scale(kV);
-			mForce.z = -1000f;
 		}
 	}
 

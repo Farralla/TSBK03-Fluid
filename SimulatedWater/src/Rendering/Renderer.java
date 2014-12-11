@@ -65,6 +65,22 @@ public class Renderer implements Runnable{
 		return buffer;
 	}
 	
+	protected FloatBuffer vector3ArrayBuffer(Vector3f[] vArray){
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(vArray.length*3);
+		for(Vector3f v:vArray){
+			v.store(buffer);
+		}
+		buffer.flip();
+		return buffer;
+	}
+	
+	protected FloatBuffer floatArrayBuffer(float[] fArray){
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(fArray.length);
+		buffer.put(fArray);
+		buffer.flip();
+		return buffer;
+	}
+	
 	
 	protected void init(){
 		setupOpenGL();

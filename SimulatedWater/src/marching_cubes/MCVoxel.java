@@ -16,11 +16,20 @@ public class MCVoxel {
 		mValue = value;
 	}
 	
-	public Vector3f getPosition(){
+	public synchronized Vector3f getPosition(){
 		return mPosition;
 	}
 	
-	public float getValue(){
+	public synchronized float getValue(){
 		return mValue;
+	}
+	
+	public synchronized void resetValue(){
+		mValue = 0;
+	}
+
+	public void addValue(float value) {
+		mValue += value;
+		
 	}
 }

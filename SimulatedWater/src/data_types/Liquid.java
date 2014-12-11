@@ -97,8 +97,10 @@ public class Liquid {
 		
 		timer.update();
 		timer.println("Update forces");
-		//Update the ScalarField
+		
+		//Polygonise surface
 		mMCGrid.march();
+
 		
 		//MCCube cube = mMCGrid.getCubes().get(111);
 		//Vector<MCCube> cubes = cube.getCubesInRange(3);
@@ -168,7 +170,7 @@ public class Liquid {
 		mDrawMode = drawMode;
 	}
 	
-	class Boundaries{
+	public class Boundaries{
 		public String type;
 		//Liquid bounds
 		public float xLow;
@@ -177,6 +179,8 @@ public class Liquid {
 		public float yHigh;
 		public float zLow;
 		public float zHigh;
+		
+		private boolean mSideConstraintsOn = true;
 		
 		public Boundaries(float xL,float xH,float yL,float yH,float zL,float zH){
 			type = "box";
@@ -196,6 +200,14 @@ public class Liquid {
 			yHigh = size;
 			zLow = 0;
 			zHigh = size;
+		}
+		
+		public boolean isSideConstraintsOn(){
+			return mSideConstraintsOn;
+		}
+		
+		public void setSideConstraintsOn(boolean b){
+			mSideConstraintsOn = b;
 		}
 	}
 }

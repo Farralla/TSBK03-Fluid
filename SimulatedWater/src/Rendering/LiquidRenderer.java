@@ -1,10 +1,9 @@
 package Rendering;
 
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL20.glGetUniformLocation;
-import static org.lwjgl.opengl.GL20.glUniformMatrix4;
-import static org.lwjgl.opengl.GL20.glUseProgram;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL15.*;
+import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.opengl.GL20.*;
 
 import java.nio.FloatBuffer;
 import java.util.Vector;
@@ -16,16 +15,33 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
+import com.badlogic.gdx.utils.BufferUtils;
+
 import Utils.Debug;
 import Utils.GLUtils;
 import Utils.MathUtils;
 import data_types.Liquid;
 import data_types.Particle;
 
+/**
+ * Class that extends Renderer which has basic opengl functionaliy
+ * Has functions for drawing the fluid in various modes
+ *
+ */
 public class LiquidRenderer extends Renderer {
-
-	private int particleProgram;
+	
+	//Light
+	private Vector3f[] mLightSourcesColorsArr;
+	private float[] mSpecularExponent;
+	private Vector3f[] mLightSourcesDirectionPositions;
+	
+	//shader programs
+	private int particleProgram, surfaceProgram;
+	
+	//Models
 	private Model mParticleModel;
+	
+	//The fluid
 	private Liquid mLiquid;
 
 	public LiquidRenderer(int WIDTH, int HEIGHT) {
@@ -35,13 +51,44 @@ public class LiquidRenderer extends Renderer {
 	public LiquidRenderer(int WIDTH, int HEIGHT, Liquid liquid){
 		super(WIDTH,HEIGHT);
 		mLiquid = liquid;
+		mLightSourcesColorsArr = new Vector3f[2];
+		mSpecularExponent = new float[2];
+		mLightSourcesDirectionPositions = new Vector3f[2];
 	}
 	
 	@Override
 	public void loadShaders() {
 		particleProgram = GLUtils.loadShaders("src/particleShader.vert", "src/particleShader.frag");
+		surfaceProgram = GLUtils.loadShaders("src/surfaceShader.vert", "src/surfaceShader.frag");
+	}
+	
+	public void setupLight(){
+		mLightSourcesColorsArr[0] = new Vector3f(0.5f, 0.45f, 0.35f);
+		mLightSourcesColorsArr[1] = new Vector3f(1.0f, 0.9f, 0.7f);
+		
+		mSpecularExponent[0] = 1f;
+		mSpecularExponent[1] = 60f;
+		
+		mLightSourcesDirectionPositions[0] = new Vector3f(0.3f, 0.2f, 0.7f);
+		mLightSourcesDirectionPositions[1] = new Vector3f(0.3f, 0.2f, 0.7f);
+ 	}
+	
+	public void uploadLightToShader(int program){
+		glUseProgram(program);
+		
+		FloatBuffer colorBuffer = vector3ArrayBuffer(mLightSourcesColorsArr);
+		glUniform3(glGetUniformLocation(program, "lightSourcesColorArr"), colorBuffer);
+		
+		FloatBuffer positionBuffer = vector3ArrayBuffer(mLightSourcesDirectionPositions);
+		glUniform3(glGetUniformLocation(program, "lightSourcesDirPosArr"), positionBuffer);
+		
+		FloatBuffer specularBuffer = floatArrayBuffer(mSpecularExponent);
+		glUniform1(glGetUniformLocation(program, "specularExponent"), specularBuffer);
 	}
 
+	/**
+	 * Sets up a 3d cube
+	 */
 	private void setupCube() {
 
 		// The 4 vertices (corners of a particle)
@@ -95,6 +142,9 @@ public class LiquidRenderer extends Renderer {
 		mParticleModel = new Model(vertices, null, null, null, indices);
 	}
 
+	/**
+	 * Sets up a square
+	 */
 	private void setupSquare() {
 
 		// The 4 vertices (corners of a particle)
@@ -114,6 +164,10 @@ public class LiquidRenderer extends Renderer {
 		mParticleModel = new Model(vertices, null, null, null, indices);
 	}
 
+	/**
+	 * Draws liquid depending on mode
+	 * @param liquid the liquid to draw
+	 */
 	public void drawLiquid(Liquid liquid) {
 		if (liquid.drawMode() == Liquid.DRAW_PARTICLES) {
 			drawParticles(liquid);
@@ -123,6 +177,10 @@ public class LiquidRenderer extends Renderer {
 		}
 	}
 
+	/**
+	 * Draws the particles in shape of cubes
+	 * @param liquid
+	 */
 	private void drawParticles(Liquid liquid) {
 
 		// Update camera
@@ -139,6 +197,7 @@ public class LiquidRenderer extends Renderer {
 			Matrix4f modelMatrix = MathUtils.transMatrix(particle.getPosition());
 			modelMatrix.scale(new Vector3f(0.01f, 0.01f, 0.01f));
 			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+			modelMatrixBuffer.clear();
 			glUniformMatrix4(glGetUniformLocation(particleProgram, "modelMatrix"), true, modelMatrixBuffer);
 
 			mParticleModel.draw(particleProgram, "in_Position", null, null);
@@ -150,42 +209,35 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(0);
 	}
 
+	/**
+	 * Draws the triangles that makes up the surface of the fluid
+	 * @param grid
+	 */
 	private void drawTriangles(MCGrid grid) {
 		// Update camera
 		mCamera.update();
 
 		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(particleProgram);
+		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
 		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram, "viewMatrix"), true, viewMatrixBuffer);
+		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "viewMatrix"), true, viewMatrixBuffer);
+		viewMatrixBuffer.clear();
 
 		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
 		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
-		glUniformMatrix4(glGetUniformLocation(particleProgram, "modelMatrix"), true, modelMatrixBuffer);
+		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "modelMatrix"), true, modelMatrixBuffer);
+		modelMatrixBuffer.clear();
 		
-		Vector<MCTriangle> triangles = (Vector<MCTriangle>) grid.getTriangles().clone();
+		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
 		for (MCTriangle triangle : triangles) {
-			triangle.draw(particleProgram);
+			triangle.draw(surfaceProgram);
+			triangle.freeModel();
 		}
-	}
-
-	public void drawMCTriangle(MCTriangle triangle) {
-		// Update camera
-		mCamera.update();
-
-		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(particleProgram);
-
-		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram, "viewMatrix"), true, viewMatrixBuffer);
-
-		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
-		glUniformMatrix4(glGetUniformLocation(particleProgram, "modelMatrix"), true, modelMatrixBuffer);
-		triangle.draw(particleProgram);
+		triangles.clear();
+		
+		glUseProgram(0);
 	}
 	
 	public int getParticleProgram(){
@@ -215,18 +267,30 @@ public class LiquidRenderer extends Renderer {
 				Debug.println("Isolevel: " + mLiquid.getGrid().getIsoLevel(),Debug.MAX_DEBUG);
 			}
 		}
+		else if(Keyboard.isKeyDown(Keyboard.KEY_O)){
+			mLiquid.getBoundaries().setSideConstraintsOn(false);
+		}
 	}
 	
 	@Override
 	protected void init(){
 		super.init();
 		
+		//Setup cube for particles
 		setupCube();
 		Debug.println("CUBE SETUP", Debug.MAX_DEBUG);
+		
+		setupLight();
+		Debug.println("LIGHT SETUP", Debug.MAX_DEBUG);
+		
 		//Upload projectionMatrix to shader
 		glUseProgram(particleProgram);
 		FloatBuffer projectionMatrixBuffer = matrix4Buffer(mCamera.getProjectionMatrix());
 		glUniformMatrix4(glGetUniformLocation(particleProgram,"projectionMatrix"), true, projectionMatrixBuffer);
+		
+		glUseProgram(surfaceProgram);
+		glUniformMatrix4(glGetUniformLocation(surfaceProgram,"projectionMatrix"), true, projectionMatrixBuffer);
+		uploadLightToShader(surfaceProgram);
 	}
 
 }
