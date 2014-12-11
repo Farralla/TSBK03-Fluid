@@ -4,7 +4,7 @@ import java.util.HashMap;
 
 import org.lwjgl.util.vector.Vector3f;
 
-import Utils.Model;
+import Rendering.Model;
 
 public class MCCube {
 	public static final int UP = 2;

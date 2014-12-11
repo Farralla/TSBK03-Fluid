@@ -4,12 +4,11 @@ import java.util.Vector;
 
 import org.lwjgl.util.vector.Vector3f;
 
-import data_types.ParticleInterface;
 import Utils.Debug;
 import Utils.MathUtils;
 
 public class MCGrid {
-	public static final float DEFAULT_GRID_SCALE = 0.001f;
+	public static final float DEFAULT_GRID_SCALE = 0.03f;
 	public static final float DEFAULT_ISO_LEVEL = 0.01f;
 	
 	private float mIsoLevel, mScale, mSize, mNumCubes;
@@ -57,6 +56,33 @@ public class MCGrid {
 		mNumCubes = mCubes.size();
 	}
 	
+	public void resetScalarField(){
+		for(MCCube cube: mCubes){
+			cube.resetValues();
+		}
+	}
+	
+	public void changeIsoLevel(String incrOrDecr){
+		switch(incrOrDecr){
+		case "increase":
+			if(mIsoLevel>0.5)
+				mIsoLevel += MathUtils.toDecimals(mIsoLevel/10, 1);
+			else
+				mIsoLevel += 0.05;
+			break;
+		case "decrease":
+			if(mIsoLevel>0.5)
+				mIsoLevel -= MathUtils.toDecimals(mIsoLevel/10, 1);
+			else
+				mIsoLevel -= 0.05;
+		}
+
+	}
+	
+	public float getIsoLevel(){
+		return mIsoLevel;
+	}
+	
 	public void calculateNeighbourhoods(){
 		for(MCCube cube:mCubes){
 			cube.addNeighbours(mCubes);
@@ -85,13 +111,17 @@ public class MCGrid {
 	/**
 	 * Polygonise every cube in grid
 	 */
-	public void march(){
-		mTriangles.clear();
+	public synchronized void march(){
+		synchronized(mTriangles){
+			mTriangles.clear();
+		}
 		for(MCCube cube:mCubes){
 			Vector<MCTriangle> newTriangles = new Vector<MCTriangle>();
 			newTriangles = cube.march(mIsoLevel, mScale, null, null, null);
 			if(newTriangles != null){
-				mTriangles.addAll(newTriangles);
+				synchronized(mTriangles){
+					mTriangles.addAll(newTriangles);	
+				}
 				//Debug.println("added cube triangles", Debug.MAX_DEBUG);
 			}
 		}
@@ -101,7 +131,7 @@ public class MCGrid {
 	 * Get all triangles in grid
 	 * @return
 	 */
-	public Vector<MCTriangle> getTriangles(){
+	public synchronized Vector<MCTriangle> getTriangles(){
 		return mTriangles;
 	}
 	
@@ -109,7 +139,7 @@ public class MCGrid {
 	 * Returns a vector with all MCCubes
 	 * @return
 	 */
-	public Vector<MCCube> getCubes(){
+	public synchronized Vector<MCCube> getCubes(){
 		return mCubes;
 	}
 	

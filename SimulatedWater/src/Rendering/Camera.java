@@ -104,7 +104,7 @@ public class Camera{
 	 * @param wheel
 	 */
 	private void mouseZoom(float wheel){
-		float zoomStep = wheel*0.0001f;
+		float zoomStep = wheel*0.001f;
 		mPos = Vector3f.add(
 				mPos, 
 				MathUtils.scalarMultVec3(mLookDir, zoomStep), 

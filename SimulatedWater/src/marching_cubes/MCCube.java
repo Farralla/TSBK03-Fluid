@@ -7,14 +7,15 @@ import java.util.Vector;
 import org.lwjgl.util.vector.Vector3f;
 
 import Utils.Debug;
+import Utils.Kernel;
 import Utils.MathUtils;
-import data_types.ParticleInterface;
+import data_types.Particle;
 
 /**
  * MCCube class Implements the marching cubes algorithm
  *
  */
-public class MCCube implements CubeInterface {
+public class MCCube {
 	public static final int LEFT = -1;
 	public static final int RIGHT = 1;
 	public static final int DOWN = -2;
@@ -23,16 +24,21 @@ public class MCCube implements CubeInterface {
 	public static final int OUT = 3;
 	public static final int SELF = 0;
 
-	private Vector3f mPos; //Middle of the cube
+	private Vector3f mPos; // Middle of the cube
+	private MCVoxel[] mVoxels = new MCVoxel[8];
 	private Vector3f[] mPositions = new Vector3f[8]; // Position of cell corners
 	private Vector3f[] mNormals = new Vector3f[8]; // The normals of each corner
 	private float[] mValues = new float[8]; // value of the function at this
 											// grid corner
 	private static float mScale;
 	private int mId;
+	
+	private float mH = 0.07f;
 
 	private HashMap<Integer, MCCube> mNeighbours;
-	private Vector<ParticleInterface> mParticleList;
+	private Vector<Particle> mParticleList;
+
+	private Kernel mKernel;
 
 	public MCCube() {
 
@@ -45,24 +51,56 @@ public class MCCube implements CubeInterface {
 	 */
 	public MCCube(Vector3f pos, float scale, int id) {
 		mId = id; // Cube ID
-		mPos = pos; //Middle of cube
+		mPos = pos; // Middle of cube
+		mKernel = new Kernel(mH);
+		// Vertex positions
 		// Bottom
-		mPositions[0] = new Vector3f(pos.x - scale/2, pos.y-scale/2, pos.z + scale/2);
-		mPositions[1] = new Vector3f(pos.x + scale/2, pos.y-scale/2, pos.z + scale/2);
-		mPositions[2] = new Vector3f(pos.x + scale/2, pos.y-scale/2, pos.z - scale/2);
-		mPositions[3] = new Vector3f(pos.x - scale/2, pos.y-scale/2, pos.z - scale/2);
+//		mVoxels[0] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+//		mVoxels[1] = new MCVoxel(pos.x + scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+//		mVoxels[2] = new MCVoxel(pos.x + scale / 2, pos.y - scale / 2, pos.z - scale / 2,0);
+//		mVoxels[3] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z - scale / 2,0);
+//		
+//		mVoxels[4] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+//		mVoxels[5] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+//		mVoxels[6] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+//		mVoxels[7] = new MCVoxel(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2,0);
+		
+		mPositions[0] = new Vector3f(pos.x - scale / 2, pos.y - scale / 2, pos.z + scale / 2);
+		mPositions[1] = new Vector3f(pos.x + scale / 2, pos.y - scale / 2, pos.z + scale / 2);
+		mPositions[2] = new Vector3f(pos.x + scale / 2, pos.y - scale / 2, pos.z - scale / 2);
+		mPositions[3] = new Vector3f(pos.x - scale / 2, pos.y - scale / 2, pos.z - scale / 2);
 
 		// Bottom
-		mPositions[4] = new Vector3f(pos.x - scale/2, pos.y+scale/2, pos.z + scale/2);
-		mPositions[5] = new Vector3f(pos.x + scale/2, pos.y+scale/2, pos.z + scale/2);
-		mPositions[6] = new Vector3f(pos.x + scale/2, pos.y+scale/2, pos.z - scale/2);
-		mPositions[7] = new Vector3f(pos.x - scale/2, pos.y+scale/2, pos.z - scale/2);
+		mPositions[4] = new Vector3f(pos.x - scale / 2, pos.y + scale / 2, pos.z + scale / 2);
+		mPositions[5] = new Vector3f(pos.x + scale / 2, pos.y + scale / 2, pos.z + scale / 2);
+		mPositions[6] = new Vector3f(pos.x + scale / 2, pos.y + scale / 2, pos.z - scale / 2);
+		mPositions[7] = new Vector3f(pos.x - scale / 2, pos.y + scale / 2, pos.z - scale / 2);
+
+		// Normals
+		// Bottom
+		mNormals[0] = new Vector3f(-1, -1, -1);
+		mNormals[0].normalise();
+		mNormals[1] = new Vector3f(1, -1, -1);
+		mNormals[1].normalise();
+		mNormals[2] = new Vector3f(1, -1, 1);
+		mNormals[2].normalise();
+		mNormals[3] = new Vector3f(-1, -1, 1);
+		mNormals[3].normalise();
+
+		// Top
+		mNormals[4] = new Vector3f(-1, 1, -1);
+		mNormals[4].normalise();
+		mNormals[5] = new Vector3f(1, 1, -1);
+		mNormals[5].normalise();
+		mNormals[6] = new Vector3f(1, 1, 1);
+		mNormals[6].normalise();
+		mNormals[7] = new Vector3f(-1, 1, 1);
+		mNormals[7].normalise();
 
 		mScale = scale;
 		mId = id;
-		mParticleList = new Vector<ParticleInterface>();
+		mParticleList = new Vector<Particle>();
 		mNeighbours = new HashMap<Integer, MCCube>();
-		System.out.println("Created MCCube " + mId + " at: " + mPos);
 
 	}
 
@@ -70,18 +108,18 @@ public class MCCube implements CubeInterface {
 		mParticleList.clear();
 	}
 
-	public synchronized void addParticle(ParticleInterface particle) {
+	public synchronized void addParticle(Particle particle) {
 		mParticleList.add(particle);
 	}
 
-	public synchronized void removeParticle(ParticleInterface particle) {
+	public synchronized void removeParticle(Particle particle) {
 		mParticleList.remove(particle);
 	}
 
-	public synchronized boolean containsParticle(ParticleInterface particle) {
-		if (	(particle.getPosition().x <= mPos.x + mScale/2 && particle.getPosition().x >= mPos.x-mScale/2) &&
-				(particle.getPosition().y <= mPos.y + mScale/2 && particle.getPosition().y >= mPos.y-mScale/2) &&
-				(particle.getPosition().z <= mPos.z + mScale/2 && particle.getPosition().z >= mPos.z-mScale/2)) {
+	public synchronized boolean containsParticle(Particle particle) {
+		if ((particle.getPosition().x <= mPos.x + mScale / 2 && particle.getPosition().x >= mPos.x - mScale / 2) &&
+				(particle.getPosition().y <= mPos.y + mScale / 2 && particle.getPosition().y >= mPos.y - mScale / 2) &&
+				(particle.getPosition().z <= mPos.z + mScale / 2 && particle.getPosition().z >= mPos.z - mScale / 2)) {
 			return true;
 		} else
 			return false;
@@ -123,7 +161,8 @@ public class MCCube implements CubeInterface {
 				}
 			}
 		}
-		Debug.println("Cube id" + mId + "number of neigbours" + getNeighbours().size(),Debug.MAX_DEBUG);
+		// Debug.println("Cube id" + mId + "number of neigbours" +
+		// getNeighbours().size(),Debug.MAX_DEBUG);
 	}
 
 	/**
@@ -155,19 +194,32 @@ public class MCCube implements CubeInterface {
 			break;
 		default:
 			break;
-			
+
 		}
 		return temp;
 	}
 
-	@Override
+	/**
+	 * Get the position of the cube
+	 */
 	public Vector3f getPosition() {
 		return mPos;
 	}
 
-	@Override
+	/**
+	 * Get the side length of the cube
+	 */
 	public float getSize() {
 		return mScale;
+	}
+
+	/**
+	 * Get the cube id
+	 * 
+	 * @return cube id
+	 */
+	public int getId() {
+		return mId;
 	}
 
 	/**
@@ -177,89 +229,112 @@ public class MCCube implements CubeInterface {
 	 */
 	public synchronized void updateScalarField() {
 		// Update each corner vertex scalar values
-		for (int i = 0; i < mPositions.length; i++) {
-			// Container for total addition to vertex i
-			Vector3f total = new Vector3f(0, 0, 0);
-
-			// Calculate and add additons for particles in thes cube
-			for (ParticleInterface particle : mParticleList) {
-				total = Vector3f.add(
-						total,
-						Vector3f.sub(particle.getPosition(), mPositions[i], null),
-						null);
-			}
-			
-			// Calculate and add additions for particles in every nearby cube
-			Vector<MCCube> nearbyCubes = getCubesInRange(3);
-			for(MCCube cube:nearbyCubes){
-				for(ParticleInterface particle:cube.getParticles()){
-					total = Vector3f.add(
-							total,
-							Vector3f.sub(particle.getPosition(), mPositions[i], null),
-							null);
-				}
-			}
-			mValues[i] = total.length();
-		}
-
+//		for (int i = 0; i < mPositions.length; i++) {
+//			mValues[i] = 0;
+//			// Container for total addition to vertex i
+//			Vector3f total = new Vector3f(0, 0, 0);
+//
+//			// Calculate and add additions for particles in every nearby cube
+//			Vector<MCCube> nearbyCubes = getCubesInRange(2);
+//			Debug.println("cubes nearby " + nearbyCubes.size(), Debug.MAX_DEBUG);
+//			for (MCCube cube : nearbyCubes) {
+//				for (Particle particle : cube.getParticles()) {
+//					// Based on distance
+//					Vector3f rvec = Vector3f.sub(particle.getPosition(), mPositions[i], null);
+//					if(rvec.length() < mH){
+//						rvec.scale(mKernel.W_gauss(rvec));
+//						total = Vector3f.add(total,rvec,null);
+//					}
+//
+//					// Based on density
+//					// Vector3f r_vec = Vector3f.sub(particle.getPosition(),
+//					// mPositions[i], null);
+//					// if (r_vec.length() < 0.07) {
+//					// mValues[i] += 0.000001 * particle.getDensity() *
+//					// mKernel.W_gauss(r_vec);
+//					// }
+//
+//				}
+//			}
+//			mValues[i] = total.length();
+//			Debug.println(mValues[i], Debug.MAX_DEBUG);
+//			// mValues[i] = total.length();
+//		}
 	}
 	
-	public Vector<MCCube> getCubesInRange(int range){
+	public void resetValues(){
+		//Debug.print("Values : ",Debug.MAX_DEBUG);
+		for(int i = 0; i<8;i++){
+			//Debug.print(mValues[i] + " ",Debug.MAX_DEBUG);
+			mValues[i] = 0;
+		}
+		//Debug.print("\n",Debug.MAX_DEBUG);
+	}
+	
+	public Vector3f getPosition(int i){
+		return mPositions[i];
+	}
+	
+	public void addToValue(int i,float val){
+		if(i<0 || i>7){
+			return;
+		}
+		mValues[i] = val;
+	}
+
+	/**
+	 * Get the nearby cubes inside a range Calculates by 6-agecensy
+	 * 
+	 * @param range
+	 * @return
+	 */
+	public Vector<MCCube> getCubesInRange(int range) {
 		Vector<MCCube> cubesInRange = new Vector<MCCube>();
-		getCubesInRangeHelper(range,0,cubesInRange);
+		getCubesInRangeHelper(range, 0, cubesInRange);
 		return cubesInRange;
 	}
-	
-	
-	
-	public void getCubesInRangeHelper(int range,int fromDir,Vector<MCCube> cubesInRange){
-		//Debug.println("Checking cube with id: " + this.getId(), Debug.MAX_DEBUG);
-		
-		if(range == 0)
+
+	/**
+	 * Helper function for the get cubes in range function
+	 * 
+	 * @param range
+	 * @param fromDir
+	 * @param cubesInRange
+	 */
+	public void getCubesInRangeHelper(int range, int fromDir, Vector<MCCube> cubesInRange) {
+		// Debug.println("Checking cube with id: " + this.getId(),
+		// Debug.MAX_DEBUG);
+
+		if (range == 0)
 			return;
 		int count = range;
 		count--;
-		
-		if(!cubesInRange.contains(this)){
-			cubesInRange.add(this);	
+
+		if (!cubesInRange.contains(this)) {
+			cubesInRange.add(this);
 		}
-		
-		
+
 		for (int dir = -3; dir < 4; dir++) {
-			//Debug.println("Checking neighbours of cube : " + this.getId(), Debug.MAX_DEBUG);
-			//Is the direction 0
-			if(dir == 0 || dir == fromDir){
-				//Debug.println("dir=0", Debug.MAX_DEBUG);
-				continue;	
-			} else if (!mNeighbours.containsKey(dir)){
-				//Debug.println("No neighbour in dir: " + dir, Debug.MAX_DEBUG);// Check if there is any neighbouring cube in this direction
+			// Debug.println("Checking neighbours of cube : " + this.getId(),
+			// Debug.MAX_DEBUG);
+			// Is the direction 0
+			if (dir == 0 || dir == fromDir) {
+				// Debug.println("dir=0", Debug.MAX_DEBUG);
+				continue;
+			} else if (!mNeighbours.containsKey(dir)) {
+				// Debug.println("No neighbour in dir: " + dir,
+				// Debug.MAX_DEBUG);// Check if there is any neighbouring cube
+				// in this direction
+				continue;
+			} else if (cubesInRange.contains(mNeighbours.get(dir))) {
 				continue;
 			}
-			
+
 			MCCube nextCube = mNeighbours.get(dir);
-			//Debug.println("Next cube id: " + nextCube.getId(), Debug.MAX_DEBUG);
-			nextCube.getCubesInRangeHelper(count,-dir,cubesInRange);
+			// Debug.println("Next cube id: " + nextCube.getId(),
+			// Debug.MAX_DEBUG);
+			nextCube.getCubesInRangeHelper(count, -dir, cubesInRange);
 		}
-	}
-	
-	public Vector<MCCube> getNeighborVector(Vector<Integer> checkedIds){
-		Vector<MCCube> result = new Vector<MCCube>();
-		
-		for (int dir = -3; dir < 4; dir++) {
-			if (!mNeighbours.containsKey(dir))
-				continue;
-			MCCube cube = mNeighbours.get(dir);
-			
-			if(!checkedIds.contains(cube.getId())){
-				result.add(cube);
-				checkedIds.add(cube.getId());
-			}
-		}		
-		return result;
-	}
-	
-	public int getId(){
-		return mId;
 	}
 
 	/**
@@ -267,7 +342,7 @@ public class MCCube implements CubeInterface {
 	 * 
 	 * @return
 	 */
-	public synchronized Vector<ParticleInterface> getParticles() {
+	public synchronized Vector<Particle> getParticles() {
 		return mParticleList;
 	}
 
@@ -285,7 +360,7 @@ public class MCCube implements CubeInterface {
 			FloatBuffer normals) {
 		int cubeindex = 0;
 		int i;
-		int triangleCount = 0;
+		// int triangleCount = 0;
 		Vector3f[] vertlist = new Vector3f[12];
 
 		if (mValues[0] < isoLevel)
@@ -351,11 +426,12 @@ public class MCCube implements CubeInterface {
 				vertexPositions.put(vertlist[triTable[cubeindex][i + 2]].z);
 			}
 
-			MCTriangle temp = new MCTriangle(vertlist[triTable[cubeindex][i]], vertlist[triTable[cubeindex][i + 1]],
+			MCTriangle temp = new MCTriangle(
+					vertlist[triTable[cubeindex][i]],
+					vertlist[triTable[cubeindex][i + 1]],
 					vertlist[triTable[cubeindex][i + 2]]);
-
 			triangles.add(temp);
-			triangleCount++;
+			// triangleCount++;
 		}
 
 		return triangles;

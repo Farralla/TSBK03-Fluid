@@ -6,10 +6,12 @@ import java.util.Vector;
 import marching_cubes.MCCube;
 import marching_cubes.MCGrid;
 
+import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
 import Utils.Debug;
+import Utils.Timer;
 import de.lessvoid.nifty.controls.slider.builder.SliderBuilder;
 
 /**
@@ -79,20 +81,32 @@ public class Liquid {
 	}
 	
 	public void update(){
+		mMCGrid.resetScalarField();
+		Timer timer = new Timer();
+		timer.off();
 		//Calculate densities and pressures of particles
 		for(Particle particle:mParticleList){
 			particle.updateDensityAndPressure(this);
 		}
+		timer.update();
+		timer.println("update Desnsities and pressures");
 		//Update particle forces, velocities, positions
 		for(Particle particle:mParticleList){
 			particle.update(this);
 		}
-		//Update the ScalarField
-		mMCGrid.update();
 		
-//		MCCube cube = mMCGrid.getCubes().get(555);
-//		Debug.println("Number of neighbours "+ cube.getNeighbours().size(),Debug.MAX_DEBUG);
-//		Debug.println("Number of cubes "+cube.getCubesInRange(4).size(),Debug.MAX_DEBUG);
+		timer.update();
+		timer.println("Update forces");
+		//Update the ScalarField
+		mMCGrid.march();
+		
+		//MCCube cube = mMCGrid.getCubes().get(111);
+		//Vector<MCCube> cubes = cube.getCubesInRange(3);
+		
+		//Debug.println("cubes withing range 3 of cube 555: " + cubes.size(),Debug.MAX_DEBUG);
+//		for(MCCube c:cubes){
+//			System.out.print(c.getId() + " ");
+//		}
 	}
 	
 	public Particle getParticle(int particleID){

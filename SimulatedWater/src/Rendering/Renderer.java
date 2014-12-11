@@ -1,16 +1,8 @@
 package Rendering;
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.glClear;
 import static org.lwjgl.opengl.GL11.glClearColor;
 import static org.lwjgl.opengl.GL11.glViewport;
-import static org.lwjgl.opengl.GL20.glGetUniformLocation;
-import static org.lwjgl.opengl.GL20.glUniformMatrix4;
-import static org.lwjgl.opengl.GL20.glUseProgram;
 
 import java.nio.FloatBuffer;
-
-import marching_cubes.MCGrid;
-import marching_cubes.MCTriangle;
 
 import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
@@ -21,31 +13,20 @@ import org.lwjgl.opengl.PixelFormat;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
-import Utils.GLUtils;
-import Utils.MathUtils;
-import Utils.Model;
-import data_types.Liquid;
-import data_types.Particle;
+import Utils.Debug;
 
 
-public class Renderer{
+public class Renderer implements Runnable{
 	
 	// Setup variables
-	private final String WINDOW_TITLE = "Simulated glass of water";
-	private int mWIDTH;
-	private int mHEIGHT;
+	protected String WINDOW_TITLE = "Simulated glass of water";
+	protected int mWIDTH;
+	protected int mHEIGHT;
 	
 	//Initiate camera
-	Camera mCamera;
-	
-	//Shaders
-	private int basicProgram;
-	private int particleProgram;
-	
-	private Model mParticleModel;
+	protected Camera mCamera;
 	
 	public void loadShaders(){
-		particleProgram = GLUtils.loadShaders("src/particleShader.vert", "src/particleShader.frag");
 	}
 	
 	public Renderer(int WIDTH,int HEIGHT){
@@ -53,7 +34,7 @@ public class Renderer{
 		mHEIGHT = HEIGHT;
 	};
 	
-	public void setupOpenGL() {
+	protected void setupOpenGL() {
 		// Setup an OpenGL context with API version 3.2
 		try {
 			PixelFormat pixelFormat = new PixelFormat();
@@ -77,176 +58,36 @@ public class Renderer{
 		glViewport(0, 0, mWIDTH, mHEIGHT);	
 	}
 	
-	public void setupCube(){
-		
-		// The 4 vertices (corners of a particle)
-		final float[] vertices = {
-				// Front face
-				-0.5f, -0.5f,  0.5f,
-				0.5f, -0.5f,  0.5f,
-				0.5f,  0.5f,  0.5f,
-				-0.5f,  0.5f,  0.5f,
-		                              
-				// Back face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f,  0.5f, -0.5f,
-				0.5f,  0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-		                              
-				// Top face
-				-0.5f,  0.5f, -0.5f,
-				-0.5f,  0.5f,  0.5f,
-				0.5f,  0.5f,  0.5f,
-				0.5f,  0.5f, -0.5f,
-		                              
-				// Bottom face
-				-0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f,  0.5f,
-				-0.5f, -0.5f,  0.5f,
-		                              
-				// Right face
-				0.5f, -0.5f, -0.5f,
-				0.5f,  0.5f, -0.5f,
-				0.5f,  0.5f,  0.5f,
-				0.5f, -0.5f,  0.5f,
-		                              
-				// Left face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f, -0.5f,  0.5f,
-				-0.5f,  0.5f,  0.5f,
-				-0.5f,  0.5f, -0.5f
-		};
-		
-		final byte[] indices = {
-				0,  1,  2,      0,  2,  3,    // front
-				4,  5,  6,      4,  6,  7,    // back
-				8,  9,  10,     8,  10, 11,   // top
-				12, 13, 14,     12, 14, 15,   // bottom
-				16, 17, 18,     16, 18, 19,   // right
-				20, 21, 22,     20, 22, 23    // left
-		};
-		
-		mParticleModel = new Model(vertices, null, null, null, indices);
-	}
-	
-	public void setupSquare(){
-		
-		// The 4 vertices (corners of a particle)
-		final float[] vertices = {
-				// Front face
-				-0.5f, -0.5f,  0.5f,
-				0.5f, -0.5f,  0.5f,
-				0.5f,  0.5f,  0.5f,
-				-0.5f,  0.5f,  0.5f,
-		};
-		
-		final byte[] indices = {
-				0, 1, 2,
-				2, 3, 0
-		};
-		
-		mParticleModel = new Model(vertices, null, null, null, indices);
-	}
-	
-	public FloatBuffer matrix4Buffer(Matrix4f mat){
+	protected FloatBuffer matrix4Buffer(Matrix4f mat){
 		FloatBuffer buffer = BufferUtils.createFloatBuffer(16);
-		mat.storeTranspose(buffer); //Shopuld this be non-transposed?
+		mat.storeTranspose(buffer);
 		buffer.flip();
 		return buffer;
 	}
 	
-	public void drawLiquid(Liquid liquid){
-		if(liquid.drawMode() == Liquid.DRAW_PARTICLES){
-			drawParticles(liquid);
-		}
-		else if(liquid.drawMode() == Liquid.DRAW_SURFACE){
-			drawTriangles(liquid.getGrid());
-		}
-	}
 	
-	public void drawParticles(Liquid liquid){
-		
-		//Update camera
-		mCamera.update();
-		
-		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(particleProgram);
-		
-		//Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"viewMatrix"), true, viewMatrixBuffer);
-		for(Particle particle:liquid.getParticleList()){
-			//Upload modelMatrix to shader
-			Matrix4f modelMatrix = MathUtils.transMatrix(particle.getPosition());
-			modelMatrix.scale(new Vector3f(0.001f,0.001f,0.001f));
-			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
-			glUniformMatrix4(glGetUniformLocation(particleProgram,"modelMatrix"), true, modelMatrixBuffer);
-			
-			mParticleModel.draw(particleProgram,"in_Position",null,null);	
-		}
-		//glDisableVertexAttribArray(0);
-		//glDisableVertexAttribArray(1);
-		//glDisableVertexAttribArray(2);
-		//glBindVertexArray(0);
-		glUseProgram(0);	
-	}
-	
-	public void drawTriangles(MCGrid grid){
-		//Update camera
-		mCamera.update();
-		
-		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(particleProgram);
-		
-		//Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"viewMatrix"), true, viewMatrixBuffer);
-		
-		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0,0,0));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"modelMatrix"), true, modelMatrixBuffer);
-		
-		for(MCTriangle triangle:grid.getTriangles()){
-			triangle.draw(particleProgram);
-		}
-	}
-	
-	public void drawMCTriangle(MCTriangle triangle){
-		//Update camera
-		mCamera.update();
-		
-		glClear(GL_COLOR_BUFFER_BIT);
-		glUseProgram(particleProgram);
-		
-		//Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"viewMatrix"), true, viewMatrixBuffer);
-		
-		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0,0,0));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"modelMatrix"), true, modelMatrixBuffer);
-		triangle.draw(particleProgram);
-	}
-	
-	public void init(){
+	protected void init(){
 		setupOpenGL();
 		loadShaders();
-		setupCube();
-		
+		Debug.println("INITIATED OPENGL", Debug.MAX_DEBUG);
 		//Setup camera
 		mCamera = new Camera();
-		mCamera.init(new Vector3f(0.025f, 0.025f,-0.05f),new Vector3f(0.025f, 0.025f, 0.025f),new Vector3f(0f, 1f, 0f), 90f, mWIDTH/mHEIGHT, 0.0001f, 1000f);
-		
-		//Upload projectionMatrix to shader
-		glUseProgram(particleProgram);
-		FloatBuffer projectionMatrixBuffer = matrix4Buffer(mCamera.getProjectionMatrix());
-		glUniformMatrix4(glGetUniformLocation(particleProgram,"projectionMatrix"), true, projectionMatrixBuffer);
+		mCamera.init(new Vector3f(0.25f, 0.25f,-0.5f),new Vector3f(0.25f, 0.25f, 0.25f),new Vector3f(0f, 1f, 0f), 90f, mWIDTH/mHEIGHT, 0.0001f, 1000f);
 	}
 	
-	public int getParticleProgram(){
-		return particleProgram;
+	protected void draw(){
+		//To implemented in subclass
 	}
-	
 
+	@Override
+	public void run() {
+		init();
+		while(!Display.isCloseRequested()){
+			draw();
+			// Force a maximum FPS of about 30 ----> dT = 1/30 = 0.033
+			Display.sync(30);
+			// Let the CPU synchronize with the GPU if GPU is tagging behind
+			Display.update();
+		}
+	}
 }

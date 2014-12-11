@@ -8,25 +8,31 @@ public class Debug {
 	
 	private static int debugMode = MAX_DEBUG;
 	
-	public static void println(Object o){
-		if(debugMode == MEDIUM_DEBUG){
-			System.out.println(o);
-		}
-	}
-	
 	public static void println(Object o,int level){
 		if(debugMode >= level){
 			System.out.println(o);
 		}
 	}
 	
-	public static void setDebugLevel(){
-		debugMode = MAX_DEBUG;
+	public static void print(Object o,int level){
+		if(debugMode >= level){
+			System.out.print(o);
+		}
+	}
+	
+	public static void println(Object o){
+		if(debugMode == MEDIUM_DEBUG){
+			System.out.println(o);
+		}
 	}
 	
 	public static void err(Object o,int level){
 		if(debugMode >= level){
 			System.out.println(o);
 		}
+	}
+	
+	public static void setDebugMode(int mode){
+		debugMode = mode;
 	}
 }

@@ -5,6 +5,32 @@ import static java.lang.Math.pow;
 import org.lwjgl.util.vector.Vector3f;
 
 public class Kernel {
+	private float h;
+	private float hSq;
+	
+	//Constants
+	private float poly6Constant;
+	private float poly6GradConstant;
+	private float poly6LapConstant;
+	private float gaussConstant;
+	private float pressureGradConstant;
+	private float viscosityLapConstant;
+	
+	public void updateConstants(float h){
+		poly6Constant = (float) (315/(64*Math.PI*pow(h,9)));
+		poly6GradConstant = (float) -(945/(32*Math.PI*pow(h,9)));
+		poly6LapConstant = (float) (945/(8*Math.PI*pow(h,9)));
+		gaussConstant = (float) (1/(Math.pow(Math.PI, 3/2)*pow(h,3)));
+		pressureGradConstant = (float) -(45/(Math.PI*pow(h,6)));
+		viscosityLapConstant = (float) (45/(Math.PI*pow(h,6)));
+	}
+	
+	public Kernel(float h){
+		this.h = h;
+		this.hSq = (float) Math.pow(h,2);
+		updateConstants(h);
+	}
+	
 	/**
 	 * General weight function
 	 * Used for density weight
@@ -12,11 +38,12 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static float W_poly6(Vector3f r_vec,float h){
+	public float W_poly6(Vector3f r_vec){
 		float weight = 0;
 		float r = r_vec.length();
-		//System.out.println("r : " + r);
-		weight = (float) (315/(64*Math.PI*pow(h,9))*(pow((pow(h,2)-pow(r,2)),3)));
+		//weight = (float) (315/(64*Math.PI*pow(h,9))*(pow((pow(h,2)-pow(r,2)),3)));
+		
+		weight = (float) (poly6Constant*(pow(hSq-pow(r,2),3)));
 		return weight;
 	}
 	
@@ -26,11 +53,12 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static Vector3f GradW_poly6(Vector3f r_vec, float h) {
+	public Vector3f GradW_poly6(Vector3f r_vec) {
 		Vector3f gradW = new Vector3f(r_vec);
 		float r = r_vec.length();
 		float W = 0;
-		W = (float) -(945/(32*Math.PI*pow(h,9))*Math.pow((pow(h,2)-pow(r,2)),2));
+		//W = (float) -(945/(32*Math.PI*pow(h,9))*Math.pow((pow(h,2)-pow(r,2)),2));
+		W = (float) (poly6GradConstant*Math.pow((hSq-pow(r,2)),2));
 		gradW.scale(W);
 		return gradW;
 	}
@@ -41,11 +69,12 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static float LapW_poly6(Vector3f r_vec, float h) {
+	public float LapW_poly6(Vector3f r_vec) {
 		float r = r_vec.length();
 		float W = 0;
 		float temp = (float) (pow(h,2)-pow(r,2));
-		W = (float) ((945/(8*Math.PI*pow(h,9))*(temp))*(pow(r,2)-3/4*(temp)));
+		//W = (float) ((945/(8*Math.PI*pow(h,9))*(temp))*(pow(r,2)-3/4*(temp)));
+		W = (float) (poly6LapConstant*temp*(pow(r,2)-3*temp/4));
 		return W;
 	}
 	
@@ -55,10 +84,10 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static float W_gauss(Vector3f r_vec, float h){
+	public float W_gauss(Vector3f r_vec){
 		float weight = 0;
 		float r = r_vec.length();
-		weight = (float) (1/(Math.pow(Math.PI, 3/2)*pow(h,3))*Math.exp(pow(r,2)/pow(h,2)));
+		weight = (float) (gaussConstant*Math.exp(pow(r,2)/hSq));
 		return weight;
 	}
 	
@@ -68,14 +97,15 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static Vector3f GradW_pressure(Vector3f r_vec, float h) {
+	public Vector3f GradW_pressure(Vector3f r_vec) {
 		Vector3f gradW = new Vector3f(r_vec);
 		float r = r_vec.length();
-		if(r==0){
-			r=0.01f;
+		if(r<0.0001f){
+			r=0.0001f;
 		}
 		float W = 0;
-		W = (float) -(45/(Math.PI*pow(h,6)*r)*Math.pow((h-r),2));
+		//W = (float) -(45/(Math.PI*pow(h,6)*r)*Math.pow((h-r),2));
+		W = (float)  (pressureGradConstant / r * Math.pow((h-r),2));
 		gradW.scale(W);
 		return gradW;
 	}
@@ -86,10 +116,11 @@ public class Kernel {
 	 * @param h
 	 * @return
 	 */
-	public static float LapW_viscosity(Vector3f r_vec,float h){
+	public float LapW_viscosity(Vector3f r_vec){
 		float r = r_vec.length();
 		float weight = 0;
-		weight = (float) (45/(Math.PI*pow(h,6))*(h-r));
+		//weight = (float) (45/(Math.PI*pow(h,6))*(h-r));
+		weight = (float) viscosityLapConstant*(h-r);
 		return weight;
 	}
 }

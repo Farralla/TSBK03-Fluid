@@ -1,44 +1,47 @@
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector3f;
 
+import Rendering.LiquidRenderer;
 import Rendering.Renderer;
+import Utils.Debug;
 import Utils.GLUtils;
+import Utils.Timer;
 import data_types.Liquid;
 
 public class Simulation {
 		public static final int WIDTH = 640;
 		public static final int HEIGHT = 480;
 		
-	public static void main(String[] args) throws Exception {
+		public static double timeStamp;
+		public static double dT;
 		
+	public static void main(String[] args) throws Exception {
+		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(700,0.05f,0.005f,0.1f);
+		Liquid liquid = new Liquid(1000,0.3f,0.03f,10f);
 		liquid.init();
 		
 		//Initiate renderer
-		Renderer renderingUnit= new Renderer(WIDTH,HEIGHT);
-		renderingUnit.init();
+		LiquidRenderer renderingUnit= new LiquidRenderer(WIDTH,HEIGHT,liquid);
+		Thread renderingThread = new Thread(renderingUnit);
+		renderingThread.setDaemon(true);
+		renderingThread.start();
 		
-		Vector3f[] vArray = {new Vector3f(0,0,0), new Vector3f(1,1,1)};
-		float[] array = GLUtils.toArray(vArray);
-		
+		timeStamp = System.currentTimeMillis();
+		Timer timer = new Timer();
+		timer.init();
+		timer.off();
 		
 		//Initiate Loop
 		//int updateCount = 0;
-		while (!Display.isCloseRequested()) {
-			//updateCount++;
-			//System.out.println(updateCount);
+		while (true) {
+			timer.update();
+			//timer.println();
 			
 			//Update liquid
 			liquid.update();
-			
-			//Draw liquid
-			renderingUnit.drawLiquid(liquid);
-			
-			// Force a maximum FPS of about 30 ----> dT = 1/30 = 0.033
-			Display.sync(30);
-			// Let the CPU synchronize with the GPU if GPU is tagging behind
-			Display.update();
+			timer.update();
+			timer.println("Updated liquid");
 		}
 	}
 }
