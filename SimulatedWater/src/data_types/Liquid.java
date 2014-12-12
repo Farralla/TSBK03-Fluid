@@ -22,10 +22,11 @@ import de.lessvoid.nifty.controls.slider.builder.SliderBuilder;
 public class Liquid {
 	public static final int DRAW_PARTICLES = 0;
 	public static final int DRAW_SURFACE = 1;
-	public static final int DRAW_GRID = 2;
+	public static final int DRAW_TRIANGLES = 2;
+	public static final int DRAW_GRID = 3;
 	
 	//drawMode
-	private int mDrawMode = DRAW_SURFACE;
+	private int mDrawMode = DRAW_TRIANGLES;
 	
 	//Member variables
 	private int mNumberOfParticles;
@@ -83,7 +84,7 @@ public class Liquid {
 	public void update(){
 		mMCGrid.resetScalarField();
 		Timer timer = new Timer();
-		timer.off();
+		timer.on();
 		//Calculate densities and pressures of particles
 		for(Particle particle:mParticleList){
 			particle.updateDensityAndPressure(this);
@@ -100,6 +101,9 @@ public class Liquid {
 		
 		//Polygonise surface
 		mMCGrid.march();
+		
+		timer.update();
+		timer.println("Marching cubes ");
 
 		
 		//MCCube cube = mMCGrid.getCubes().get(111);

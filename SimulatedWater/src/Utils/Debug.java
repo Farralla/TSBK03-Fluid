@@ -21,7 +21,7 @@ public class Debug {
 	}
 	
 	public static void println(Object o){
-		if(debugMode == MEDIUM_DEBUG){
+		if(debugMode >= MEDIUM_DEBUG){
 			System.out.println(o);
 		}
 	}

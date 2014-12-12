@@ -18,7 +18,7 @@ public class Simulation {
 	public static void main(String[] args) throws Exception {
 		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(1000,0.3f,0.03f,5f);
+		Liquid liquid = new Liquid(1000,0.3f,0.03f,0.1f);
 		liquid.init();
 		
 		//Initiate renderer

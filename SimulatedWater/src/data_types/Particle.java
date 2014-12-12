@@ -13,6 +13,7 @@ import org.lwjgl.util.vector.Vector4f;
 import Utils.Debug;
 import Utils.Kernel;
 import Utils.MathUtils;
+import Utils.Timer;
 import data_types.Liquid.Boundaries;
 
 /*For each time step: For each time step:
@@ -55,7 +56,7 @@ public class Particle {
 	private float mRho; // Initial density
 	private float mH; // radius of influence
 	private float mEta; // Viscosity constant
-	private static final float g = 4.5f; // Gravity
+	private static final float g = 1f; // Gravity
 	private float mSigma; // colorfield constant
 	private float mCFThresh; // colorfield gradient length threshold
 
@@ -95,10 +96,10 @@ public class Particle {
 	public Particle(Liquid liquid, Vector3f position) {
 		// Tuning
 		mH = 0.05f; // cm ----> about 17 particles in radius
-		mK = 200f; // speed of sound^2 = 5^2 can be set higher
+		mK = 100f; // speed of sound^2 = 5^2 can be set higher
 		mRho = 1000f; // kg/cm^3
-		mEta = 100f; // 1,002 mPa*s
-		mSigma = 200f;
+		mEta = 1000f; // 1,002 mPa*s
+		mSigma = 400f;
 		mCFThresh = 10f;
 		mMass = 0.05f;
 
@@ -154,7 +155,11 @@ public class Particle {
 		Vector3f surfaceTensionForce = new Vector3f(0, 0, 0);
 		Vector3f cS_grad = new Vector3f(0, 0, 0);
 		float cS_lap = 0;
-
+		
+		Timer timer = new Timer();
+		timer.setType(Timer.MILLIS);
+		timer.off();
+		timer.init();
 		// Add contributions from all neighbors
 
 		// (new Thread(new Calculator(calcPressure) {
@@ -176,6 +181,7 @@ public class Particle {
 			cS_grad = Vector3f.add(cS_grad, colorFieldGradient(neighbor), null);
 		}
 
+
 		// Update surface Tension force if the gradient is large enough
 		float gradientLength = cS_grad.length();
 		// System.out.println("Gradient length: " + gradientLength);
@@ -187,6 +193,9 @@ public class Particle {
 		mForce = Vector3f.add(mForce, pressureForce, null);
 		mForce = Vector3f.add(mForce, viscosityForce, null);
 		mForce = Vector3f.add(mForce, surfaceTensionForce, null);
+		
+		timer.update();
+		timer.println("Added forces from neighbours");
 
 		if (mForce.y > MAX_FORCE) {
 			mForce.y = MAX_FORCE;
@@ -212,8 +221,8 @@ public class Particle {
 		// mAcceleration.normalise().scale(MAX_ACCELERATION);
 		// }
 
-		float kA = 1 - mAcceleration.length() * 0.01f;
-		mAcceleration.scale(kA);
+//		float kA = 1 - mAcceleration.length() * 0.01f;
+//		mAcceleration.scale(kA);
 
 		mVelocity = Vector3f.add(mVelocity,
 				(Vector3f) mAcceleration.scale((float) dT),
@@ -233,17 +242,33 @@ public class Particle {
 		mForce.set(0, 0, 0);
 		mAcceleration.set(0, 0, 0);
 
+		timer.update();
 		checkBoundaries(liquid);
+		
+		timer.update();
+		timer.println("Check boundaries ");
 
 		// Update which cube the particle is in
 		updateInCube();
+		timer.update();
+		timer.println("Updated cube ");
 
 		// Add density value to nearby grid cubes
 		updateNearbyCubes();
+		
+		timer.update();
+		timer.println("Stamp nearby cubes");
+		
 	}
 
 	public void updateNearbyCubes() {
-		Vector<MCCube> nearbyCubes = mInCube.getCubesInRange(5);
+		Timer timer = new Timer();
+		timer.setType(Timer.MILLIS);
+		timer.off();
+		timer.init();
+		Vector<MCCube> nearbyCubes = mInCube.getCubesInRange(2);
+		timer.update();
+		timer.println("Nearby cubes");
 		Vector<MCVoxel> updatedVoxels = new Vector<MCVoxel>();
 		
 		
@@ -256,7 +281,7 @@ public class Particle {
 				
 				Vector3f rvec = Vector3f.sub(mPosition, cube.getPosition(i), null);
 				if (rvec.length() < mH) {
-					cube.addToValue(i, 0.00001f * mDensity * mKernel.W_poly6(rvec));
+					cube.addToValue(i, 0.00001f* mKernel.W_poly6(rvec));
 				}
 			}
 		}
@@ -309,7 +334,7 @@ public class Particle {
 			return;
 		}
 		else {
-			Vector<MCCube> nearbyCubes = mInCube.getCubesInRange(4);
+			Vector<MCCube> nearbyCubes = mInCube.getCubesInRange(5);
 			for (MCCube cube : nearbyCubes) {
 				if (cube.containsParticle(this)) {
 					mInCube.removeParticle(this);

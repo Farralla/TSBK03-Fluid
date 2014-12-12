@@ -5,6 +5,7 @@ import static org.lwjgl.opengl.GL20.*;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.ArrayList;
 
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector3f;
@@ -25,6 +26,26 @@ public class GLUtils {
 			result[i*3+2] = vectorArray[i].z;
 		}
 		return result;
+	}
+	
+	public static float[] convertToFloatArray(ArrayList<Float> arrayList)
+	{
+	  float[] array = new float[arrayList.size()];
+	  for(int i=0;i<arrayList.size();i++)
+	  {
+	    array[i] = (float) arrayList.get(i);
+	  }
+	  return array;
+	}
+	
+	public static byte[] convertToByteArray(ArrayList<Byte> arrayList)
+	{
+	  byte[] array = new byte[arrayList.size()];
+	  for(int i=0;i<arrayList.size();i++)
+	  {
+	    array[i] = (byte) arrayList.get(i);
+	  }
+	  return array;
 	}
 	
 	/**

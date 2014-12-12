@@ -11,7 +11,9 @@ import java.util.Vector;
 import marching_cubes.MCGrid;
 import marching_cubes.MCTriangle;
 
+import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
+import org.lwjgl.opengl.Drawable;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
@@ -67,7 +69,7 @@ public class LiquidRenderer extends Renderer {
 		mLightSourcesColorsArr[1] = new Vector3f(1.0f, 0.9f, 0.7f);
 		
 		mSpecularExponent[0] = 1f;
-		mSpecularExponent[1] = 60f;
+		mSpecularExponent[1] = 5f;
 		
 		mLightSourcesDirectionPositions[0] = new Vector3f(0.3f, 0.2f, 0.7f);
 		mLightSourcesDirectionPositions[1] = new Vector3f(0.3f, 0.2f, 0.7f);
@@ -173,6 +175,9 @@ public class LiquidRenderer extends Renderer {
 			drawParticles(liquid);
 		}
 		else if (liquid.drawMode() == Liquid.DRAW_SURFACE) {
+			drawLiquid(liquid.getGrid());
+		}
+		else if(liquid.drawMode() == Liquid.DRAW_TRIANGLES){
 			drawTriangles(liquid.getGrid());
 		}
 	}
@@ -186,7 +191,7 @@ public class LiquidRenderer extends Renderer {
 		// Update camera
 		mCamera.update();
 
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(particleProgram);
 
 		// Upload viewMAtrix to shader
@@ -217,7 +222,7 @@ public class LiquidRenderer extends Renderer {
 		// Update camera
 		mCamera.update();
 
-		glClear(GL_COLOR_BUFFER_BIT);
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
@@ -231,11 +236,70 @@ public class LiquidRenderer extends Renderer {
 		modelMatrixBuffer.clear();
 		
 		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
-		for (MCTriangle triangle : triangles) {
+		for (final MCTriangle triangle : triangles) {
 			triangle.draw(surfaceProgram);
 			triangle.freeModel();
 		}
 		triangles.clear();
+		
+		glUseProgram(0);
+	}
+	
+//	private void drawTriangles2(MCGrid grid){
+//		mCamera.update();
+//
+//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+//		glUseProgram(surfaceProgram);
+//		
+//        glMatrixMode(GL_PROJECTION);
+//        glLoadIdentity();
+//        glOrtho(0, 640, 480, 0, 1, -1);
+//        glMatrixMode(GL_MODELVIEW);
+//		
+//		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
+//		glBegin(GL_TRIANGLES);
+//		for(MCTriangle triangle : triangles){
+//			glVertex3f(triangle.getVertexPositions()[0].x, triangle.getVertexPositions()[0].y, triangle.getVertexPositions()[0].z);
+//			glVertex3f(triangle.getVertexPositions()[1].x, triangle.getVertexPositions()[1].y, triangle.getVertexPositions()[1].z);
+//			glVertex3f(triangle.getVertexPositions()[2].x, triangle.getVertexPositions()[2].y, triangle.getVertexPositions()[2].z);
+//			
+//			glNormal3f(triangle.getVertexNormals()[0].x, triangle.getVertexNormals()[0].y, triangle.getVertexNormals()[0].z);
+//			glNormal3f(triangle.getVertexNormals()[1].x, triangle.getVertexNormals()[1].y, triangle.getVertexNormals()[1].z);
+//			glNormal3f(triangle.getVertexNormals()[2].x, triangle.getVertexNormals()[2].y, triangle.getVertexNormals()[2].z);
+//		}
+//		glEnd();
+//	}
+	
+	/**
+	 * TODO Not working correcly, indices need fixing
+	 * Still as laggy as with triangle approach
+	 * @param grid
+	 */
+	private void drawLiquid(MCGrid grid){
+		mCamera.update();
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+		glUseProgram(surfaceProgram);
+
+		// Upload viewMAtrix to shader
+		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "viewMatrix"), true, viewMatrixBuffer);
+		viewMatrixBuffer.clear();
+
+		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
+		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "modelMatrix"), true, modelMatrixBuffer);
+		modelMatrixBuffer.clear();
+		
+		if(grid.getVertexPositions() != null){
+			float[] v = grid.getVertexPositions();
+			byte[] i = grid.getIndices();
+			float[] n = grid.getNormals();
+			Model model = new Model(v,n,null,null,i);
+			model.draw(surfaceProgram, "in_Position", "in_Normal", null);
+			model.clear();
+		}
+
 		
 		glUseProgram(0);
 	}
@@ -257,6 +321,9 @@ public class LiquidRenderer extends Renderer {
 		else if(Keyboard.isKeyDown(Keyboard.KEY_2)){
 			mLiquid.setDrawMode(Liquid.DRAW_SURFACE);
 		}
+		else if(Keyboard.isKeyDown(Keyboard.KEY_3)){
+			mLiquid.setDrawMode(Liquid.DRAW_TRIANGLES);
+		}
 		else if(Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)){
 			if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)){
 				mLiquid.getGrid().changeIsoLevel("decrease");
@@ -275,7 +342,7 @@ public class LiquidRenderer extends Renderer {
 	@Override
 	protected void init(){
 		super.init();
-		
+		glEnable(GL_DEPTH_TEST);
 		//Setup cube for particles
 		setupCube();
 		Debug.println("CUBE SETUP", Debug.MAX_DEBUG);

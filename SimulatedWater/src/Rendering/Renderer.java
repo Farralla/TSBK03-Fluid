@@ -9,11 +9,14 @@ import org.lwjgl.LWJGLException;
 import org.lwjgl.opengl.ContextAttribs;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
+import org.lwjgl.opengl.Drawable;
 import org.lwjgl.opengl.PixelFormat;
+import org.lwjgl.opengl.SharedDrawable;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
 import Utils.Debug;
+import Utils.Timer;
 
 
 public class Renderer implements Runnable{
@@ -58,6 +61,10 @@ public class Renderer implements Runnable{
 		glViewport(0, 0, mWIDTH, mHEIGHT);	
 	}
 	
+	protected Drawable getDrawable() throws LWJGLException {
+		return new SharedDrawable(Display.getDrawable());
+	}
+	
 	protected FloatBuffer matrix4Buffer(Matrix4f mat){
 		FloatBuffer buffer = BufferUtils.createFloatBuffer(16);
 		mat.storeTranspose(buffer);
@@ -98,8 +105,15 @@ public class Renderer implements Runnable{
 	@Override
 	public void run() {
 		init();
+		Timer timer = new Timer();
+		timer.init();
+		timer.off();
+		
 		while(!Display.isCloseRequested()){
+			timer.update();
 			draw();
+			timer.update();
+			timer.println("Redraw ");
 			// Force a maximum FPS of about 30 ----> dT = 1/30 = 0.033
 			Display.sync(30);
 			// Let the CPU synchronize with the GPU if GPU is tagging behind

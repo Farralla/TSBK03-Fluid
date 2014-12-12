@@ -58,4 +58,12 @@ public class MCTriangle{
 	public synchronized void freeModel(){
 		mModel.clear();
 	}
+	
+	public Vector3f[] getVertexPositions(){
+		return p;
+	}
+	
+	public Vector3f[] getVertexNormals(){
+		return n;
+	}
 }

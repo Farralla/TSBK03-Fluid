@@ -1,6 +1,7 @@
 package marching_cubes;
 
 import java.nio.FloatBuffer;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Vector;
 
@@ -70,24 +71,39 @@ public class MCCube {
 
 		// Normals
 		// Bottom
-		mNormals[0] = new Vector3f(-1, -1, -1);
-		mNormals[0].normalise();
-		mNormals[1] = new Vector3f(1, -1, -1);
-		mNormals[1].normalise();
-		mNormals[2] = new Vector3f(1, -1, 1);
-		mNormals[2].normalise();
-		mNormals[3] = new Vector3f(-1, -1, 1);
-		mNormals[3].normalise();
+		mVoxels[0].setNormal(new Vector3f(-1, 1, -1));
+		mVoxels[1].setNormal(new Vector3f(1, 1, -1));
+		mVoxels[2].setNormal(new Vector3f(1, 1, 1));
+		mVoxels[3].setNormal(new Vector3f(-1, 1, 1));
 
 		// Top
-		mNormals[4] = new Vector3f(-1, 1, -1);
-		mNormals[4].normalise();
-		mNormals[5] = new Vector3f(1, 1, -1);
-		mNormals[5].normalise();
-		mNormals[6] = new Vector3f(1, 1, 1);
-		mNormals[6].normalise();
-		mNormals[7] = new Vector3f(-1, 1, 1);
-		mNormals[7].normalise();
+		mVoxels[4].setNormal(new Vector3f(-1, -1, -1));
+		mVoxels[5].setNormal(new Vector3f(1, -1, -1));
+		mVoxels[6].setNormal(new Vector3f(1, -1, 1));
+		mVoxels[7].setNormal(new Vector3f(-1, -1, 1));
+		
+//		// Normals
+//		// Bottom
+//		mNormals[0] = new Vector3f(-1, -1, -1);
+//		mNormals[0].normalise();
+//		mNormals[1] = new Vector3f(1, -1, -1);
+//		mNormals[1].normalise();
+//		mNormals[2] = new Vector3f(1, -1, 1);
+//		mNormals[2].normalise();
+//		mNormals[3] = new Vector3f(-1, -1, 1);
+//		mNormals[3].normalise();
+//
+//		// Top
+//		mNormals[4] = new Vector3f(-1, 1, -1);
+//		mNormals[4].normalise();
+//		mNormals[5] = new Vector3f(1, 1, -1);
+//		mNormals[5].normalise();
+//		mNormals[6] = new Vector3f(1, 1, 1);
+//		mNormals[6].normalise();
+//		mNormals[7] = new Vector3f(-1, 1, 1);
+//		mNormals[7].normalise();
+		
+		
 
 		mScale = scale;
 		mId = id;
@@ -388,6 +404,7 @@ public class MCCube {
 	 * @param cubesInRange
 	 */
 	public void getCubesInRangeHelper(int range, int fromDir, Vector<MCCube> cubesInRange) {
+		
 		if (range == 0)
 			return;
 		int count = range;
@@ -435,8 +452,8 @@ public class MCCube {
 	 * @param normals
 	 * @return
 	 */
-	Vector<MCTriangle> march(float isoLevel, float fScale, FloatBuffer vertexPositions, FloatBuffer indices,
-			FloatBuffer normals) {
+	Vector<MCTriangle> march(float isoLevel, float fScale, ArrayList<Float> vertexPositions, ArrayList<Byte> indices,
+			ArrayList<Float> normals) {
 		int cubeindex = 0;
 		int i;
 		// int triangleCount = 0;
@@ -467,62 +484,62 @@ public class MCCube {
 		Vector3f[] result = new Vector3f[2];
 		/* Find the vertices where the surface intersects the cube */
 		if ((MCGrid.edgeTable[cubeindex] & 1) > 0){
-			result = interpolate(isoLevel, mVoxels[0], mVoxels[1], mNormals[0], mNormals[1]);
+			result = interpolate(isoLevel, mVoxels[0], mVoxels[1]);
 			vertlist[0] = result[0];
 			normlist[0] = result[1];
 		}	
 		if ((MCGrid.edgeTable[cubeindex] & 2) > 0){
-			result = interpolate(isoLevel, mVoxels[1], mVoxels[2], mNormals[1], mNormals[2]);
+			result = interpolate(isoLevel, mVoxels[1], mVoxels[2]);
 			vertlist[1] = result[0];
 			normlist[1] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 4) > 0){
-			result = interpolate(isoLevel, mVoxels[2], mVoxels[3], mNormals[2], mNormals[3]);
+			result = interpolate(isoLevel, mVoxels[2], mVoxels[3]);
 			vertlist[2] = result[0];
 			normlist[2] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 8) > 0){
-			result = interpolate(isoLevel, mVoxels[3], mVoxels[0], mNormals[3], mNormals[0]);
+			result = interpolate(isoLevel, mVoxels[3], mVoxels[0]);
 			vertlist[3] = result[0];
 			normlist[3] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 16) > 0){
-			result = interpolate(isoLevel, mVoxels[4], mVoxels[5], mNormals[4], mNormals[5]);
+			result = interpolate(isoLevel, mVoxels[4], mVoxels[5]);
 			vertlist[4] = result[0];
 			normlist[4] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 32) > 0){
-			result = interpolate(isoLevel, mVoxels[5], mVoxels[6], mNormals[5], mNormals[6]);
+			result = interpolate(isoLevel, mVoxels[5], mVoxels[6]);
 			vertlist[5] = result[0];
 			normlist[5] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 64) > 0){
-			result = interpolate(isoLevel, mVoxels[6], mVoxels[7], mNormals[6], mNormals[7]);
+			result = interpolate(isoLevel, mVoxels[6], mVoxels[7]);
 			vertlist[6] = result[0];
 			normlist[6] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 128) > 0){
-			result = interpolate(isoLevel, mVoxels[7], mVoxels[4], mNormals[7], mNormals[4]);
+			result = interpolate(isoLevel, mVoxels[7], mVoxels[4]);
 			vertlist[7] = result[0];
 			normlist[7] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 256) > 0){
-			result = interpolate(isoLevel, mVoxels[0], mVoxels[4], mNormals[0], mNormals[4]);
+			result = interpolate(isoLevel, mVoxels[0], mVoxels[4]);
 			vertlist[8] = result[0];
 			normlist[8] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 512) > 0){
-			result = interpolate(isoLevel, mVoxels[1], mVoxels[5], mNormals[1], mNormals[5]);
+			result = interpolate(isoLevel, mVoxels[1], mVoxels[5]);
 			vertlist[9] = result[0];
 			normlist[9] = result[1];
 		} 
 		if ((MCGrid.edgeTable[cubeindex] & 1024) > 0){
-			result = interpolate(isoLevel, mVoxels[2], mVoxels[6], mNormals[2], mNormals[6]);
+			result = interpolate(isoLevel, mVoxels[2], mVoxels[6]);
 			vertlist[10] = result[0];
 			normlist[10] = result[1];
 		}
 		if ((MCGrid.edgeTable[cubeindex] & 2048) > 0){
-			result = interpolate(isoLevel, mVoxels[3], mVoxels[7], mNormals[3], mNormals[7]);
+			result = interpolate(isoLevel, mVoxels[3], mVoxels[7]);
 			vertlist[11] = result[0];
 			normlist[11] = result[1];
 		}
@@ -530,17 +547,38 @@ public class MCCube {
 		Vector<MCTriangle> triangles = new Vector<MCTriangle>();
 		for (i = 0; MCGrid.triTable[cubeindex][i] != -1; i += 3) {
 //			if (vertexPositions != null) {
-//				vertexPositions.put(vertlist[triTable[cubeindex][i]].x);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i]].y);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i]].z);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i]].x);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i]].y);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i]].z);
 //
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 1]].x);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 1]].y);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 1]].z);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 1]].x);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 1]].y);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 1]].z);
 //
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 2]].x);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 2]].y);
-//				vertexPositions.put(vertlist[triTable[cubeindex][i + 2]].z);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 2]].x);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 2]].y);
+//				vertexPositions.add(vertlist[MCGrid.triTable[cubeindex][i + 2]].z);
+//			}
+//			
+//			if (indices != null) {
+//				indices.add((byte) indices.size());
+//				indices.add((byte) indices.size());
+//				indices.add((byte) indices.size());
+//				Debug.println("indice " + indices.get(indices.size()-1), Debug.MAX_DEBUG);
+//			}
+//			
+//			if(normals != null){
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i]].x);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i]].y);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i]].z);
+//
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 1]].x);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 1]].y);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 1]].z);
+//
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 2]].x);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 2]].y);
+//				normals.add(normlist[MCGrid.triTable[cubeindex][i + 2]].z);
 //			}
 
 			MCTriangle temp = new MCTriangle(
@@ -566,10 +604,12 @@ public class MCCube {
 	 * @param n2
 	 * @return
 	 */
-	Vector3f[] interpolate(double isolevel, MCVoxel v1, MCVoxel v2,Vector3f n1, Vector3f n2) {
+	Vector3f[] interpolate(double isolevel, MCVoxel v1, MCVoxel v2) {
 		Vector3f result[] = new Vector3f[2];
 		Vector3f p1 = v1.getPosition();
 		Vector3f p2 = v2.getPosition();
+		Vector3f n1 = v1.getNormal();
+		Vector3f n2 = v2.getNormal();
 		double valp1 = v1.getValue();
 		double valp2 = v2.getValue();
 		
@@ -579,17 +619,17 @@ public class MCCube {
 
 		if (Math.abs(isolevel - valp1) < EPSILON){
 			result[0] = p1;
-			result[1] = n1;
+			result[1] = (Vector3f) Vector3f.add(n1, n2, null).scale((float) 0.5);
 			return result;
 		}
 		else if (Math.abs(isolevel - valp2) < EPSILON){
 			result[0] = p2;
-			result[1] = n2;
+			result[1] = (Vector3f) Vector3f.add(n1, n2, null).scale((float) 0.5);
 			return result;
 		}
 		else if (Math.abs(valp1 - valp2) < EPSILON){
 			result[0] = p1;
-			result[1] = n1;
+			result[1] = (Vector3f) Vector3f.add(n1, n2, null).scale((float) 0.5);
 			return result;
 		}
 		mu = (isolevel - valp1) / (valp2 - valp1);

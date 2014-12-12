@@ -4,15 +4,25 @@ public class Timer {
 	private double timeStamp;
 	private double dT;
 	private boolean on = true;
+	private float type;
+	
+	public static final float SEC = 0.001f;
+	public static final float MILLIS = 1f;
+	
 	
 	public Timer(){
-		timeStamp = timeStamp = System.currentTimeMillis(); 
+		timeStamp = System.currentTimeMillis(); 
+		type = SEC;
 	}
 	public void update(){
 		if(!on) 
 			return;
-		dT = 0.001*(System.currentTimeMillis() - timeStamp);
+		dT = type*(System.currentTimeMillis() - timeStamp);
 		timeStamp = System.currentTimeMillis();
+	}
+	
+	public void setType(float type){
+		this.type = type;
 	}
 	
 	public void init(){
@@ -24,13 +34,13 @@ public class Timer {
 	public  void println(){
 		if(!on)
 			return;
-		Debug.println("Timer dT: " + dT, Debug.MAX_DEBUG);
+		Debug.println("Timer dT: " + (float)dT, Debug.MAX_DEBUG);
 	}
 	
 	public void println(String s){
 		if(!on)
 			return;
-		Debug.println("Timer dT: " + s + dT, Debug.MAX_DEBUG);
+		Debug.println("Timer dT: " + s + " " + (float)dT, Debug.MAX_DEBUG);
 	}
 	
 	public double getTimeStamp(){

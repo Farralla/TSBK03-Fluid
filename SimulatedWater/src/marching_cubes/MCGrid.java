@@ -1,10 +1,13 @@
 package marching_cubes;
 
+import java.util.ArrayList;
 import java.util.Vector;
 
 import org.lwjgl.util.vector.Vector3f;
 
+import Rendering.Model;
 import Utils.Debug;
+import Utils.GLUtils;
 import Utils.MathUtils;
 
 public class MCGrid {
@@ -14,6 +17,12 @@ public class MCGrid {
 	private float mIsoLevel, mScale, mSize, mNumCubes;
 	Vector<MCCube> mCubes;
 	Vector<MCTriangle> mTriangles;
+	
+	//Model
+	private float[] mVertexPositions;
+	private byte[] mIndices;
+	private float[] mNormals;
+	
 	
 	public MCGrid(){
 		mCubes = new Vector<MCCube>();
@@ -68,13 +77,13 @@ public class MCGrid {
 			if(mIsoLevel>0.5)
 				mIsoLevel += MathUtils.toDecimals(mIsoLevel/10, 1);
 			else
-				mIsoLevel += 0.05;
+				mIsoLevel += 0.2*mIsoLevel;
 			break;
 		case "decrease":
 			if(mIsoLevel>0.5)
 				mIsoLevel -= MathUtils.toDecimals(mIsoLevel/10, 1);
 			else
-				mIsoLevel -= 0.05;
+				mIsoLevel -= 0.2*mIsoLevel;
 		}
 
 	}
@@ -116,8 +125,13 @@ public class MCGrid {
 			mTriangles.clear();
 		}
 		
+//		ArrayList<Float> vertexPositions = new ArrayList<Float>();
+//		ArrayList<Byte> indices = new ArrayList<Byte>();
+//		ArrayList<Float> normals = new ArrayList<Float>();
+		
 		for(MCCube cube:mCubes){
 			Vector<MCTriangle> newTriangles = new Vector<MCTriangle>();
+			
 			newTriangles = cube.march(mIsoLevel, mScale, null, null, null);
 			if(newTriangles != null){
 				synchronized(mTriangles){
@@ -128,6 +142,11 @@ public class MCGrid {
 			}
 			//cube.resetValues();
 		}
+//		synchronized(this){
+//			mVertexPositions = GLUtils.convertToFloatArray(vertexPositions);
+//			mIndices = GLUtils.convertToByteArray(indices);
+//			mNormals = GLUtils.convertToFloatArray(normals);
+//		}
 	}
 	
 	/**
@@ -144,6 +163,18 @@ public class MCGrid {
 	 */
 	public synchronized Vector<MCCube> getCubes(){
 		return mCubes;
+	}
+	
+	public synchronized float[] getVertexPositions() {
+		return mVertexPositions;
+	}
+	
+	public synchronized byte[] getIndices(){
+		return mIndices;
+	}
+	
+	public synchronized float[] getNormals(){
+		return mNormals;
 	}
 	
 	// marching cubes table data
