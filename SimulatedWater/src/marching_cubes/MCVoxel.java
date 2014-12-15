@@ -31,7 +31,7 @@ public class MCVoxel {
 		mValue = 0;
 	}
 
-	public void addValue(float value) {
+	public synchronized void addValue(float value) {
 		mValue += value;
 		
 	}
@@ -41,6 +41,7 @@ public class MCVoxel {
 	}
 	
 	public void setNormal(Vector3f n){
+		n.normalise();
 		mNormal = n;
 	}
 }

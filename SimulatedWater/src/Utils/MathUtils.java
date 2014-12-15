@@ -269,10 +269,20 @@ public final class MathUtils {
 	 */
 	public static Vector3f toDecimals(Vector3f in,int n){
 		float temp = (float) Math.pow(10, n);
-		in.x = (float) (Math.round(in.x*temp)/temp);
-		in.y = (float) (Math.round(in.y*temp)/temp);
-		in.z = (float) (Math.round(in.z*temp)/temp);
-		return in;
+		Vector3f vec = new Vector3f(in);
+		vec.x = (float) (Math.round(vec.x*temp)/temp);
+		vec.y = (float) (Math.round(vec.y*temp)/temp);
+		vec.z = (float) (Math.round(vec.z*temp)/temp);
+		return vec;
+	}
+	
+	public static Vector3f toFloor(Vector3f in,int n){
+		float temp = (float) Math.pow(10, n);
+		Vector3f vec = new Vector3f(in);
+		vec.x = (float) (Math.floor(vec.x*temp)/temp);
+		vec.y = (float) (Math.floor(vec.y*temp)/temp);
+		vec.z = (float) (Math.floor(vec.z*temp)/temp);
+		return vec;
 	}
 	
 	/**
@@ -289,6 +299,16 @@ public final class MathUtils {
 			return false;
 		}
 
+	}
+
+	public static double toDecimals(double d, int n) {
+		double temp = Math.pow(10, n);
+		return Math.round(d*temp)/temp;
+	}
+	
+	public static double toFloor(double d, int n) {
+		double temp = Math.pow(10, n);
+		return Math.floor(d*temp)/temp;
 	}
 	
 }

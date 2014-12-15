@@ -48,6 +48,16 @@ public class GLUtils {
 	  return array;
 	}
 	
+	public static short[] convertToShortArray(ArrayList<Short> arrayList)
+	{
+	  short[] array = new short[arrayList.size()];
+	  for(int i=0;i<arrayList.size();i++)
+	  {
+	    array[i] = (short) arrayList.get(i);
+	  }
+	  return array;
+	}
+	
 	/**
 	 * read and load shaders
 	 * TODO geometry shader support

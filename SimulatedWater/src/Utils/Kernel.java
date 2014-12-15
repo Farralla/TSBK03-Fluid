@@ -100,12 +100,12 @@ public class Kernel {
 	public Vector3f GradW_pressure(Vector3f r_vec) {
 		Vector3f gradW = new Vector3f(r_vec);
 		float r = r_vec.length();
-		if(r<0.0001f){
-			r=0.0001f;
+		if(r<0.000001f){
+			r=0.000001f;
 		}
 		float W = 0;
 		//W = (float) -(45/(Math.PI*pow(h,6)*r)*Math.pow((h-r),2));
-		W = (float)  (pressureGradConstant / r * Math.pow((h-r),2));
+		W = (float)  (pressureGradConstant / r * (h-r)*(h-r));
 		gradW.scale(W);
 		return gradW;
 	}

@@ -1,18 +1,17 @@
 package data_types;
 
+import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
 import marching_cubes.MCCube;
 import marching_cubes.MCGrid;
 
-import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Vector3f;
 import org.lwjgl.util.vector.Vector4f;
 
 import Utils.Debug;
 import Utils.Timer;
-import de.lessvoid.nifty.controls.slider.builder.SliderBuilder;
 
 /**
  * 
@@ -20,173 +19,273 @@ import de.lessvoid.nifty.controls.slider.builder.SliderBuilder;
  *
  */
 public class Liquid {
+	public static final boolean multiThread = true;
+	
 	public static final int DRAW_PARTICLES = 0;
 	public static final int DRAW_SURFACE = 1;
 	public static final int DRAW_TRIANGLES = 2;
 	public static final int DRAW_GRID = 3;
 	
-	//drawMode
-	private int mDrawMode = DRAW_TRIANGLES;
-	
-	//Member variables
+	//Timeout
+	public static final int TIME_OUT = 100; //ms timeout time
+
+	// drawMode
+	private int mDrawMode = DRAW_SURFACE;
+
+	// Member variables
 	private int mNumberOfParticles;
 	private float mParticleMass;
-	private float mParticleSize=1;
 	private Vector<Particle> mParticleList;
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
-	
-	//Liquid bounds
+
+	// Liquid bounds
 	private Boundaries mBoundaries;
-	
+
+	private Calculator mCalc1, mCalc2, mCalc3, mCalc4;
+
 	/**
 	 * Constructor Creates a liquid with a specified number of particles
-	 * TODO Additional information about the liquid in this constructor
-	 * @param numberOfParticles The number of particles in the liquid
-	 * @param particleMass The mass of each particle
+	 * 
+	 * @param numberOfParticles
+	 *            The number of particles in the liquid
+	 * @param particleMass
+	 *            The mass of each particle
 	 */
-	public Liquid(int numberOfParticles, float size){
+	public Liquid(int numberOfParticles, float size) {
 		setNumberOfParticles(numberOfParticles);
 		mParticleList = new Vector<Particle>();
 		mBoundaries = new Boundaries(size);
-		mMCGrid = new MCGrid(size,MCGrid.DEFAULT_GRID_SCALE,MCGrid.DEFAULT_ISO_LEVEL);
+		mMCGrid = new MCGrid(size, MCGrid.DEFAULT_GRID_SCALE, MCGrid.DEFAULT_ISO_LEVEL);
 	}
-	
+
 	/**
-	 * Constructor Creates a liquid with a specified number of particles
-	 * Creates MCgrid with input parameters
+	 * Constructor Creates a liquid with a specified number of particles Creates
+	 * MCgrid with input parameters
+	 * 
 	 * @param numberOfParticles
 	 * @param size
 	 * @param gridScale
 	 * @param isoLevel
 	 */
-	public Liquid(int numberOfParticles, float size, float gridScale, float isoLevel){
+	public Liquid(int numberOfParticles, float size, float gridScale, float isoLevel) {
 		setNumberOfParticles(numberOfParticles);
 		mParticleList = new Vector<Particle>();
 		mBoundaries = new Boundaries(size);
-		mMCGrid = new MCGrid(size,gridScale,isoLevel);
-		
+		mMCGrid = new MCGrid(size, gridScale, isoLevel);
+
 		init();
 	}
-	
-	public void init(){
+
+	public void init() {
 		Random random = new Random();
-		for(int i = 0; i < mNumberOfParticles;i++){
+//		for (int i = 0; i < mNumberOfParticles; i++) {
+//			Vector3f startingPos = new Vector3f(
+//					mBoundaries.xHigh * random.nextFloat(),
+//					mBoundaries.yHigh * random.nextFloat(),
+//					mBoundaries.xHigh * random.nextFloat());
+//			mParticleList.add(new Particle(this, startingPos));
+//			
+//		}
+		
+		for (int i = 0; i < mNumberOfParticles; i++) {
 			Vector3f startingPos = new Vector3f(
-					mBoundaries.xHigh*random.nextFloat(),
-					mBoundaries.yHigh*random.nextFloat(),
-					mBoundaries.xHigh*random.nextFloat());
-			mParticleList.add(new Particle(this,startingPos));
-			
+					mBoundaries.xHigh/4 * random.nextFloat(),
+					mBoundaries.yHigh * random.nextFloat(),
+					mBoundaries.xHigh * random.nextFloat());
+			mParticleList.add(new Particle(this, startingPos));
 		}
+		
+		int partSize = (int) Math.ceil(mParticleList.size() / 4);
+		mCalc1 = new Calculator(this, 1,mParticleList.subList(0, partSize));
+		mCalc2 = new Calculator(this,2, mParticleList.subList(partSize, 2*partSize));
+		mCalc3 = new Calculator(this, 3, mParticleList.subList(2*partSize, 3*partSize));
+		mCalc4 = new Calculator(this,4, mParticleList.subList(3 * partSize,4*partSize));
+
 	}
 	
-	public void update(){
-		mMCGrid.resetScalarField();
-		Timer timer = new Timer();
-		timer.on();
-		//Calculate densities and pressures of particles
-		for(Particle particle:mParticleList){
-			particle.updateDensityAndPressure(this);
-		}
-		timer.update();
-		timer.println("update Desnsities and pressures");
-		//Update particle forces, velocities, positions
-		for(Particle particle:mParticleList){
-			particle.update(this);
-		}
+	private void runCalculationThreads(int mode){	
+		Thread t2 = new Thread(mCalc1);
+		t2.setPriority(Thread.MAX_PRIORITY);
+		//t1.setDaemon(true);
 		
-		timer.update();
-		timer.println("Update forces");
+		Thread t3 = new Thread(mCalc2);
+		t3.setPriority(Thread.MAX_PRIORITY);
+		//t2.setDaemon(true);
 		
-		//Polygonise surface
-		mMCGrid.march();
+		Thread t4 = new Thread(mCalc3);
+		t4.setPriority(Thread.MAX_PRIORITY);
+		//t3.setDaemon(true);
 		
-		timer.update();
-		timer.println("Marching cubes ");
+		Thread t5 = new Thread(mCalc4);
+		t5.setPriority(Thread.MAX_PRIORITY);
+		//t4.setDaemon(true);
+		
+		t2.start();
+
 
 		
-		//MCCube cube = mMCGrid.getCubes().get(111);
-		//Vector<MCCube> cubes = cube.getCubesInRange(3);
 		
-		//Debug.println("cubes withing range 3 of cube 555: " + cubes.size(),Debug.MAX_DEBUG);
-//		for(MCCube c:cubes){
-//			System.out.print(c.getId() + " ");
-//		}
-	}
+		t3.start();
+
+
+		
 	
-	public Particle getParticle(int particleID){
+		t4.start();
+
+		
+		
+		t5.start();
+		try {
+			t2.join();
+			t3.join();
+			t4.join();
+			t5.join();
+		} catch (InterruptedException e) {
+			e.printStackTrace();
+		}
+		
+	}
+
+	public void update() {
+		Timer timer = new Timer();
+		timer.off();
+		timer.init();
+		mMCGrid.resetScalarField();
+		timer.update();
+		timer.println("Reset scalar field");
+		// Calculate densities and pressures of particles
+		
+//		if(!multiThread){
+//			for (Particle particle : mParticleList) {
+//				particle.updateDensityAndPressure(this);
+//			}
+//		}
+//		else{
+			///Debug.println("Liquid: Running 1 calculation");
+			
+
+//			while (mCalc1.getRun() || mCalc2.getRun() || mCalc3.getRun() || mCalc4.getRun()) {
+//				try {
+//					synchronized (this) {
+//						Debug.println("Liquid: Waiting on 1 calculation");
+//						wait();
+//					}
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+//		}
+
+		timer.update();
+		timer.println("update Desnsities and pressures");
+
+		if (!multiThread) {
+			// Update particle forces, velocities, positions
+			for (Particle particle : mParticleList) {
+				particle.update(this);
+			}
+		}
+		else{
+			//Debug.println("Liquid: Running 2 calculation");
+			runCalculationThreads(Calculator.CALC_DENSITIES_PRESSURES);
+			runCalculationThreads(Calculator.CALC_FORCES);
+			runCalculationThreads(Calculator.CALC_UPDATE);
+
+//			while (mCalc1.getRun() || mCalc2.getRun() || mCalc3.getRun() || mCalc4.getRun()) {
+//				try {
+//					synchronized (this) {
+//						Debug.println("Liquid: Waiting on 2 calculation");
+//						wait();
+//					}
+//				} catch (InterruptedException e) {
+//					e.printStackTrace();
+//				}
+//			}
+		}
+
+		
+		
+
+		timer.update();
+		timer.println("Update forces");
+
+		// Polygonise surface
+		mMCGrid.march();
+
+		timer.update();
+		timer.println("Marching cubes ");
+	}
+
+	public Particle getParticle(int particleID) {
 		Particle particle = mParticleList.get(particleID);
 		return particle;
-		
+
 	}
-	
-	public Vector<Particle> getParticleList(){
+
+	public Vector<Particle> getParticleList() {
 		return mParticleList;
 	}
-	
-	public Vector4f getColor(){
+
+	public Vector4f getColor() {
 		return mColor;
 	}
-	
-	public void setColor(Vector4f color){
+
+	public void setColor(Vector4f color) {
 		mColor = color;
 	}
-	
-	public int getNumberOfParticles(){
+
+	public int getNumberOfParticles() {
 		return mNumberOfParticles;
 	}
-	
-	public float getParticleMass(){
+
+	public float getParticleMass() {
 		return mParticleMass;
 	}
-	
-	public float getParticleSize(){
-		return mParticleSize;
-	}
-	
-	public void setNumberOfParticles(int numberOfParticles){
+
+	public void setNumberOfParticles(int numberOfParticles) {
 		mNumberOfParticles = numberOfParticles;
 	}
-	
-	public void setParticleMass(float particleMass){
+
+	public void setParticleMass(float particleMass) {
 		mParticleMass = particleMass;
 	}
-	
-	public Boundaries getBoundaries(){
+
+	public Boundaries getBoundaries() {
 		return mBoundaries;
 	}
-	
-	public MCGrid getGrid(){
+
+	public MCGrid getGrid() {
 		return mMCGrid;
 	}
-	
-	public int drawMode(){
+
+	public int drawMode() {
 		return mDrawMode;
 	}
-	
+
 	/**
-	 * Set the drawmode
-	 * Allowed values {@link Liquid.DRAW_PARTICLES, Liquid.DRAW_SURFACE, Liquid.DRAW_GRID}
+	 * Set the drawmode Allowed values {@link Liquid.DRAW_PARTICLES,
+	 * Liquid.DRAW_SURFACE, Liquid.DRAW_GRID}
+	 * 
 	 * @param drawMode
 	 */
-	public void setDrawMode(int drawMode){
+	public void setDrawMode(int drawMode) {
 		mDrawMode = drawMode;
 	}
-	
-	public class Boundaries{
+
+	public class Boundaries {
 		public String type;
-		//Liquid bounds
+		// Liquid bounds
 		public float xLow;
 		public float xHigh;
 		public float yLow;
 		public float yHigh;
 		public float zLow;
 		public float zHigh;
-		
+
 		private boolean mSideConstraintsOn = true;
-		
-		public Boundaries(float xL,float xH,float yL,float yH,float zL,float zH){
+
+		public Boundaries(float xL, float xH, float yL, float yH, float zL, float zH) {
 			type = "box";
 			xLow = xL;
 			xHigh = xH;
@@ -195,8 +294,8 @@ public class Liquid {
 			zLow = zL;
 			zHigh = zH;
 		}
-		
-		public Boundaries(float size){
+
+		public Boundaries(float size) {
 			type = "box";
 			xLow = 0;
 			xHigh = size;
@@ -205,13 +304,93 @@ public class Liquid {
 			zLow = 0;
 			zHigh = size;
 		}
-		
-		public boolean isSideConstraintsOn(){
+
+		public boolean isSideConstraintsOn() {
 			return mSideConstraintsOn;
 		}
-		
-		public void setSideConstraintsOn(boolean b){
+
+		public void setSideConstraintsOn(boolean b) {
 			mSideConstraintsOn = b;
 		}
+	}
+
+	public class Calculator implements Runnable {
+		public static final int CALC_DENSITIES_PRESSURES = 0;
+		public static final int CALC_FORCES = 1;
+		public static final int CALC_UPDATE = 2;
+
+		private List<Particle> mParticles;
+		private Liquid mLiquid;
+		private Boolean run;
+		private int mMode;
+		private int mId;
+
+		public Calculator(Liquid liquid, int id, List<Particle> particleList) {
+			 mParticles = particleList;
+			Debug.println("List parts sizes " +  mParticles.size(), Debug.MAX_DEBUG);
+			mLiquid = liquid;
+			mId = id;
+			run = false;
+			mMode = CALC_DENSITIES_PRESSURES;
+		}
+
+		@Override
+		public void run() {
+//			while (true) {
+//				while (!this.run) {
+//					synchronized (this) {
+//						try {
+//							ready = true;
+//							Debug.println("Calculator: " + mId + " Calculator waiting  on start");
+//							this.wait();
+//						} catch (InterruptedException e) {
+//							e.printStackTrace();
+//						}
+//					}
+//				}
+				switch (mMode) {
+				case CALC_DENSITIES_PRESSURES:
+					for (Particle particle :  mParticles) {
+						particle.updateDensityAndPressure(mLiquid);
+					}
+					break;
+				case CALC_FORCES:
+					for (Particle particle :  mParticles) {
+						particle.updateForces(mLiquid);
+					}
+					break;
+				case CALC_UPDATE:
+					for (Particle particle :  mParticles) {
+						particle.update(mLiquid);
+					}
+					break;
+				}
+				
+
+				switchMode();
+				
+//				run=false;
+//				synchronized (mLiquid) {
+//					Debug.println("Calculator: " + mId + " Done, notify");
+//					mLiquid.notify();
+//				}
+//			}
+		}
+
+		private void switchMode() {
+			mMode++;
+			if(mMode >= 3)
+				mMode = 0;
+		}
+
+		public synchronized void setRun(boolean b) {
+			run = b;
+			this.notifyAll();
+		}
+
+		public synchronized Boolean getRun() {
+			return run;
+		}
+		
 	}
 }

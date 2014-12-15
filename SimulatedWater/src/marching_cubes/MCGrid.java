@@ -1,26 +1,35 @@
 package marching_cubes;
 
+import java.awt.MultipleGradientPaint;
+import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayList;
 import java.util.Vector;
 
 import org.lwjgl.util.vector.Vector3f;
 
-import Rendering.Model;
 import Utils.Debug;
 import Utils.GLUtils;
 import Utils.MathUtils;
 
+/**
+ * Calss which contains the grid
+ * Contains marching cubes algorithm tables
+ * All cubes in grid implements march which polygonises the cube
+ * @author Martin
+ *
+ */
 public class MCGrid {
 	public static final float DEFAULT_GRID_SCALE = 0.03f;
 	public static final float DEFAULT_ISO_LEVEL = 0.01f;
 	
-	private float mIsoLevel, mScale, mSize, mNumCubes;
+	private float mIsoLevel, mScale, mSize;
+	int mSideLength, mNumCubes;
 	Vector<MCCube> mCubes;
 	Vector<MCTriangle> mTriangles;
 	
 	//Model
 	private float[] mVertexPositions;
-	private byte[] mIndices;
+	private short[] mIndices;
 	private float[] mNormals;
 	
 	
@@ -32,7 +41,9 @@ public class MCGrid {
 	public MCGrid(float size, float scale, float isoLevel){
 		mCubes = new Vector<MCCube>();
 		mTriangles = new Vector<MCTriangle>();
+		Debug.println("Initiating MCGrid", Debug.MAX_DEBUG);
 		init(size,scale,isoLevel);
+		Debug.println("Calculating neighbourhoods", Debug.MAX_DEBUG);
 		calculateNeighbourhoods();
 		System.out.println("Created MCGrid");
 	}
@@ -46,18 +57,19 @@ public class MCGrid {
 		mIsoLevel = isoLevel;
 		mScale = scale;
 		mSize = size;
-		
-		int numBoxes = (int) (size/scale);
-		
+
+		int numBoxes = (int) (size / scale);
+		mSideLength = numBoxes;
+
 		int id = 0;
-		for(int x = 0; x < numBoxes;x++){
-			float xPos = MathUtils.toDecimals(x*scale + scale/2,4);
-			for(int y = 0; y < numBoxes;y++){
-				float yPos = MathUtils.toDecimals(y*scale + scale/2,4);
-				for(int z = 0; z < numBoxes;z++){
-					float zPos = MathUtils.toDecimals(z*scale + scale/2,4);
-					Vector3f pos = new Vector3f(xPos,yPos,zPos);
-					mCubes.add(new MCCube(pos,scale,id));
+		for (int z = 0; z < numBoxes; z++) {
+			float zPos = MathUtils.toDecimals(z * scale + scale / 2, 4);
+			for (int y = 0; y < numBoxes; y++) {
+				float yPos = MathUtils.toDecimals(y * scale + scale / 2, 4);
+				for (int x = 0; x < numBoxes; x++) {
+					float xPos = MathUtils.toDecimals(x * scale + scale / 2, 4);
+					Vector3f pos = new Vector3f(xPos, yPos, zPos);
+					mCubes.add(new MCCube(pos, scale, id));
 					id++;
 				}
 			}
@@ -67,11 +79,11 @@ public class MCGrid {
 	
 	public void resetScalarField(){
 		for(MCCube cube: mCubes){
-			cube.resetValues();
+			cube.resetVoxelValues();
 		}
 	}
 	
-	public void changeIsoLevel(String incrOrDecr){
+	public synchronized void changeIsoLevel(String incrOrDecr){
 		switch(incrOrDecr){
 		case "increase":
 			if(mIsoLevel>0.5)
@@ -88,34 +100,43 @@ public class MCGrid {
 
 	}
 	
-	public float getIsoLevel(){
-		return mIsoLevel;
-	}
-	
 	public void calculateNeighbourhoods(){
 		for(MCCube cube:mCubes){
 			cube.addNeighbours(mCubes);
+			cube.calcNeighbourhood(this,2);
 		}
 	}
 	
-	/**
-	 * Updates the scalar field
-	 * Then polygonizes the grid
-	 */
-	public void update(){
-		//updateScalarField();
-		march();
+	public MCCube getCubeAt(Vector3f position){
+		
+		Vector3f pos = MathUtils.toFloor(position, 5);
+		float xInCube = pos.x % mScale;
+		float yInCube = pos.y % mScale;
+		float zInCube = pos.z % mScale;
+		
+		float cubePosX;
+		float cubePosY;
+		float cubePosZ;
+		
+		if(pos.x >= mSize)
+			cubePosX = mSize-mScale;
+		else
+			cubePosX = MathUtils.toDecimals((pos.x-xInCube), 4);
+		
+		if(pos.y >= mSize)
+			cubePosY = mSize-mScale;
+		else
+			cubePosY = MathUtils.toDecimals((pos.y-yInCube), 4);
+		
+		if(pos.z >= mSize)
+			cubePosZ = mSize-mScale;
+		else
+			cubePosZ = MathUtils.toDecimals((pos.z-zInCube), 4);
+		
+		int cubeId = (int) Math.round((cubePosX/mScale + cubePosY * mSideLength/mScale + cubePosZ * mSideLength*mSideLength/mScale));
+		
+		return mCubes.get(cubeId);
 	}
-	
-//	/**
-//	 * Update the entire scalar distance field
-//	 */
-//	public void updateScalarField(){
-//		for(MCCube cube:mCubes){
-//			cube.updateScalarField();
-//		}
-//		
-//	}
 	
 	/**
 	 * Polygonise every cube in grid
@@ -125,28 +146,26 @@ public class MCGrid {
 			mTriangles.clear();
 		}
 		
-//		ArrayList<Float> vertexPositions = new ArrayList<Float>();
-//		ArrayList<Byte> indices = new ArrayList<Byte>();
-//		ArrayList<Float> normals = new ArrayList<Float>();
+		ArrayList<Float> vertexPositions = new ArrayList<Float>();
+		ArrayList<Short> indices = new ArrayList<Short>();
+		ArrayList<Float> normals = new ArrayList<Float>();
 		
 		for(MCCube cube:mCubes){
 			Vector<MCTriangle> newTriangles = new Vector<MCTriangle>();
 			
-			newTriangles = cube.march(mIsoLevel, mScale, null, null, null);
+			newTriangles = cube.march(mIsoLevel, mScale, vertexPositions, indices,normals);
 			if(newTriangles != null){
 				synchronized(mTriangles){
 					mTriangles.addAll(newTriangles);	
 				}
-				//Debug.println("added cube triangles", Debug.MAX_DEBUG);
 				newTriangles.clear();
 			}
-			//cube.resetValues();
 		}
-//		synchronized(this){
-//			mVertexPositions = GLUtils.convertToFloatArray(vertexPositions);
-//			mIndices = GLUtils.convertToByteArray(indices);
-//			mNormals = GLUtils.convertToFloatArray(normals);
-//		}
+		synchronized(this){
+			mVertexPositions = GLUtils.convertToFloatArray(vertexPositions);
+			mIndices = GLUtils.convertToShortArray(indices);
+			mNormals = GLUtils.convertToFloatArray(normals);
+		}
 	}
 	
 	/**
@@ -169,12 +188,28 @@ public class MCGrid {
 		return mVertexPositions;
 	}
 	
-	public synchronized byte[] getIndices(){
+	public synchronized short[] getIndices(){
 		return mIndices;
 	}
 	
 	public synchronized float[] getNormals(){
 		return mNormals;
+	}
+	
+	public synchronized float getIsoLevel(){
+		return mIsoLevel;
+	}
+	
+	public synchronized float getScale(){
+		return mScale;
+	}
+	
+	public synchronized int getSideLength(){
+		return mSideLength;
+	}
+	
+	public synchronized int getNumberOfCubes() {
+		return mNumCubes;
 	}
 	
 	// marching cubes table data

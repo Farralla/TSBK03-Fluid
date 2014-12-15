@@ -4,6 +4,7 @@ public class Debug {
 	public static int MAX_DEBUG = 2;
 	public static int MEDIUM_DEBUG = 1;
 	public static int NO_DEBUG = 0;
+	public static int mCounter = 0;
 	
 	
 	private static int debugMode = MAX_DEBUG;
@@ -28,11 +29,19 @@ public class Debug {
 	
 	public static void err(Object o,int level){
 		if(debugMode >= level){
-			System.out.println(o);
+			System.err.println(o);
 		}
 	}
 	
 	public static void setDebugMode(int mode){
 		debugMode = mode;
+	}
+	public static void counter(){
+		System.out.println("Counter: " + mCounter);
+		mCounter++;
+	}
+	
+	public static void restartCounter(){
+		mCounter = 0;
 	}
 }

@@ -132,7 +132,7 @@ public class LiquidRenderer extends Renderer {
 				-0.5f, 0.5f, -0.5f
 		};
 
-		final byte[] indices = {
+		final short[] indices = {
 				0, 1, 2, 0, 2, 3, // front
 				4, 5, 6, 4, 6, 7, // back
 				8, 9, 10, 8, 10, 11, // top
@@ -158,7 +158,7 @@ public class LiquidRenderer extends Renderer {
 				-0.5f, 0.5f, 0.5f,
 		};
 
-		final byte[] indices = {
+		final short[] indices = {
 				0, 1, 2,
 				2, 3, 0
 		};
@@ -236,6 +236,7 @@ public class LiquidRenderer extends Renderer {
 		modelMatrixBuffer.clear();
 		
 		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
+		//Debug.println("Triangles " + triangles.size(), Debug.MAX_DEBUG);
 		for (final MCTriangle triangle : triangles) {
 			triangle.draw(surfaceProgram);
 			triangle.freeModel();
@@ -244,31 +245,6 @@ public class LiquidRenderer extends Renderer {
 		
 		glUseProgram(0);
 	}
-	
-//	private void drawTriangles2(MCGrid grid){
-//		mCamera.update();
-//
-//		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-//		glUseProgram(surfaceProgram);
-//		
-//        glMatrixMode(GL_PROJECTION);
-//        glLoadIdentity();
-//        glOrtho(0, 640, 480, 0, 1, -1);
-//        glMatrixMode(GL_MODELVIEW);
-//		
-//		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
-//		glBegin(GL_TRIANGLES);
-//		for(MCTriangle triangle : triangles){
-//			glVertex3f(triangle.getVertexPositions()[0].x, triangle.getVertexPositions()[0].y, triangle.getVertexPositions()[0].z);
-//			glVertex3f(triangle.getVertexPositions()[1].x, triangle.getVertexPositions()[1].y, triangle.getVertexPositions()[1].z);
-//			glVertex3f(triangle.getVertexPositions()[2].x, triangle.getVertexPositions()[2].y, triangle.getVertexPositions()[2].z);
-//			
-//			glNormal3f(triangle.getVertexNormals()[0].x, triangle.getVertexNormals()[0].y, triangle.getVertexNormals()[0].z);
-//			glNormal3f(triangle.getVertexNormals()[1].x, triangle.getVertexNormals()[1].y, triangle.getVertexNormals()[1].z);
-//			glNormal3f(triangle.getVertexNormals()[2].x, triangle.getVertexNormals()[2].y, triangle.getVertexNormals()[2].z);
-//		}
-//		glEnd();
-//	}
 	
 	/**
 	 * TODO Not working correcly, indices need fixing
@@ -293,7 +269,7 @@ public class LiquidRenderer extends Renderer {
 		
 		if(grid.getVertexPositions() != null){
 			float[] v = grid.getVertexPositions();
-			byte[] i = grid.getIndices();
+			short[] i = grid.getIndices();
 			float[] n = grid.getNormals();
 			Model model = new Model(v,n,null,null,i);
 			model.draw(surfaceProgram, "in_Position", "in_Normal", null);

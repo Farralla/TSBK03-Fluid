@@ -7,6 +7,7 @@ import static org.lwjgl.opengl.GL30.*;
 
 import java.nio.ByteBuffer;
 import java.nio.FloatBuffer;
+import java.nio.ShortBuffer;
 
 import org.lwjgl.BufferUtils;
 
@@ -20,7 +21,7 @@ public class Model {
 	private float[] mNormalArray;
 	private float[] mTexCoordArray;
 	private float[] mColorArray;
-	private byte[] mIndexArray;
+	private short[] mIndexArray;
 	int mNumVertices;
 	int mNumIndices;
 	// Space for saving VBO and VAO IDs
@@ -38,7 +39,7 @@ public class Model {
 	 * @param numVert
 	 * @param numInd
 	 */
-	public Model(float[] vertices, float[] normals, float[] texCoords, float[] colors, byte[] indices) {
+	public Model(float[] vertices, float[] normals, float[] texCoords, float[] colors, short[] indices) {
 		set(vertices, normals, texCoords, normals, indices);
 	}
 	
@@ -56,7 +57,7 @@ public class Model {
 	 * @param colors
 	 * @param indices
 	 */
-	public void set(float[] vertices, float[] normals, float[] texCoords, float[] colors, byte[] indices) {
+	public void set(float[] vertices, float[] normals, float[] texCoords, float[] colors, short[] indices) {
 		mVertexArray = vertices;
 		mTexCoordArray = texCoords;
 		mNormalArray = normals;
@@ -64,13 +65,13 @@ public class Model {
 		mNumVertices = vertices.length;
 		mNumIndices = indices.length;
 
-		BuildModelVAO2();
+		BuildModelVAO();
 	}
 
 	/**
 	 * Binds opengl buffers from model variables
 	 */
-	private void BuildModelVAO2() {
+	private void BuildModelVAO() {
 		mVao = glGenVertexArrays();
 
 		mVb = glGenBuffers();
@@ -126,7 +127,8 @@ public class Model {
 		}
 
 		glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIb);
-		ByteBuffer indexBuffer = BufferUtils.createByteBuffer(mIndexArray.length);
+		ShortBuffer indexBuffer = BufferUtils.createShortBuffer(mIndexArray.length);
+		//ByteBuffer indexBuffer = BufferUtils.createByteBuffer(mIndexArray.length);
 		indexBuffer.put(mIndexArray);
 		indexBuffer.flip();
 		glBufferData(GL_ELEMENT_ARRAY_BUFFER, indexBuffer, GL_STATIC_DRAW);
@@ -182,7 +184,7 @@ public class Model {
 		// Bind to the index VBO that has all the information about the order of
 		// the vertices
 		// glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, mIb);
-		glDrawElements(GL_TRIANGLES, mNumIndices, GL_UNSIGNED_BYTE, 0);
+		glDrawElements(GL_TRIANGLES, mNumIndices, GL_UNSIGNED_SHORT, 0);
 	}
 	
 	/**

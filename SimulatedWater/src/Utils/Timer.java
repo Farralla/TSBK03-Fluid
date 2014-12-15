@@ -4,24 +4,31 @@ public class Timer {
 	private double timeStamp;
 	private double dT;
 	private boolean on = true;
-	private float type;
+	private double type;
 	
-	public static final float SEC = 0.001f;
-	public static final float MILLIS = 1f;
+	public static final double SEC = 0.000001f;
+	public static final double MILLIS = 0.001f;
+	public static final double MICROS = 1f;
 	
 	
 	public Timer(){
-		timeStamp = System.currentTimeMillis(); 
-		type = SEC;
+		timeStamp = System.nanoTime()/1000; 
+		type = MILLIS;
 	}
+	
+	public Timer(double type){
+		timeStamp = System.nanoTime()/1000; 
+		this.type = type;
+	}
+	
 	public void update(){
 		if(!on) 
 			return;
-		dT = type*(System.currentTimeMillis() - timeStamp);
-		timeStamp = System.currentTimeMillis();
+		dT = type*(System.nanoTime()/1000 - timeStamp);
+		timeStamp = System.nanoTime()/1000;
 	}
 	
-	public void setType(float type){
+	public void setType(double type){
 		this.type = type;
 	}
 	

@@ -13,7 +13,7 @@ public class MCTriangle{
 	public Vector3f pos;
 	public Vector3f[] p;
 	public Vector3f[] n;
-	final byte[] iArray = {0,2,1};
+	final short[] iArray = {0,2,1};
 	public Model mModel;
 	
 	public MCTriangle(){
