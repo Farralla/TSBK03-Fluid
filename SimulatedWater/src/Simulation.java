@@ -1,5 +1,19 @@
+import java.io.FileInputStream;
+import java.io.InputStream;
+import java.text.MessageFormat;
+
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector3f;
+
+
+
+
+
+
+
+import com.momchil_atanasov.data.front.parser.IOBJParser;
+import com.momchil_atanasov.data.front.parser.OBJModel;
+import com.momchil_atanasov.data.front.parser.OBJParser;
 
 import Rendering.LiquidRenderer;
 import Rendering.Renderer;
@@ -29,7 +43,8 @@ public class Simulation {
 		//Timer
 		Timer timer = new Timer();
 		timer.init();
-		timer.on();
+		timer.off();
+
 		
 		//Initiate Loop
 		//int updateCount = 0;

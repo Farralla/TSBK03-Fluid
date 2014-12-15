@@ -6,9 +6,12 @@ import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 import org.lwjgl.opengl.Display;
 import org.lwjgl.util.vector.Vector3f;
+
+import com.momchil_atanasov.data.front.parser.OBJVertex;
 
 
 public class GLUtils {
@@ -131,6 +134,8 @@ public class GLUtils {
 	    glValidateProgram(shaderProgram);
 	    return shaderProgram;
 	}
+
+
 	
 }
 

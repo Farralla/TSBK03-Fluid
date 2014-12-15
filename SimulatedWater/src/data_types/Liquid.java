@@ -20,6 +20,7 @@ import Utils.Timer;
  */
 public class Liquid {
 	public static final boolean multiThread = true;
+	private boolean mIsStarted = false;
 	
 	public static final int DRAW_PARTICLES = 0;
 	public static final int DRAW_SURFACE = 1;
@@ -36,8 +37,12 @@ public class Liquid {
 	private int mNumberOfParticles;
 	private float mParticleMass;
 	private Vector<Particle> mParticleList;
+	private Vector<CollidableSphere> mCollidables;
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
+	
+	public static final float g = 2f; // Gravity
+	public static double dT = 0.075;
 
 	// Liquid bounds
 	private Boundaries mBoundaries;
@@ -57,6 +62,8 @@ public class Liquid {
 		mParticleList = new Vector<Particle>();
 		mBoundaries = new Boundaries(size);
 		mMCGrid = new MCGrid(size, MCGrid.DEFAULT_GRID_SCALE, MCGrid.DEFAULT_ISO_LEVEL);
+		mCollidables = new Vector<CollidableSphere>();
+		init();
 	}
 
 	/**
@@ -73,20 +80,14 @@ public class Liquid {
 		mParticleList = new Vector<Particle>();
 		mBoundaries = new Boundaries(size);
 		mMCGrid = new MCGrid(size, gridScale, isoLevel);
+		mCollidables = new Vector<CollidableSphere>();
 
 		init();
 	}
 
 	public void init() {
 		Random random = new Random();
-//		for (int i = 0; i < mNumberOfParticles; i++) {
-//			Vector3f startingPos = new Vector3f(
-//					mBoundaries.xHigh * random.nextFloat(),
-//					mBoundaries.yHigh * random.nextFloat(),
-//					mBoundaries.xHigh * random.nextFloat());
-//			mParticleList.add(new Particle(this, startingPos));
-//			
-//		}
+		Particle.setValues();
 		
 		for (int i = 0; i < mNumberOfParticles; i++) {
 			Vector3f startingPos = new Vector3f(
@@ -95,6 +96,8 @@ public class Liquid {
 					mBoundaries.xHigh * random.nextFloat());
 			mParticleList.add(new Particle(this, startingPos));
 		}
+		
+		mCollidables.add(new CollidableSphere(this,new Vector3f(0.15f,0.05f,0.15f), 0.05f));
 		
 		int partSize = (int) Math.ceil(mParticleList.size() / 4);
 		mCalc1 = new Calculator(this, 1,mParticleList.subList(0, partSize));
@@ -122,20 +125,10 @@ public class Liquid {
 		//t4.setDaemon(true);
 		
 		t2.start();
-
-
-		
-		
 		t3.start();
-
-
-		
-	
 		t4.start();
-
-		
-		
 		t5.start();
+		
 		try {
 			t2.join();
 			t3.join();
@@ -148,64 +141,43 @@ public class Liquid {
 	}
 
 	public void update() {
+		
+		waitOnStart();
+		
 		Timer timer = new Timer();
 		timer.off();
 		timer.init();
 		mMCGrid.resetScalarField();
 		timer.update();
 		timer.println("Reset scalar field");
-		// Calculate densities and pressures of particles
-		
-//		if(!multiThread){
-//			for (Particle particle : mParticleList) {
-//				particle.updateDensityAndPressure(this);
-//			}
-//		}
-//		else{
-			///Debug.println("Liquid: Running 1 calculation");
-			
-
-//			while (mCalc1.getRun() || mCalc2.getRun() || mCalc3.getRun() || mCalc4.getRun()) {
-//				try {
-//					synchronized (this) {
-//						Debug.println("Liquid: Waiting on 1 calculation");
-//						wait();
-//					}
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				}
-//			}
-//		}
 
 		timer.update();
 		timer.println("update Desnsities and pressures");
 
 		if (!multiThread) {
-			// Update particle forces, velocities, positions
+			for (Particle particle : mParticleList) {
+				// Calculate densities and pressures of particles
+				particle.updateDensityAndPressure(this);
+			}
+			for (Particle particle : mParticleList) {
+				// Update particle forces
+				particle.updateForces(this);
+			}
+			// Update particle velocities, positions
 			for (Particle particle : mParticleList) {
 				particle.update(this);
 			}
 		}
 		else{
-			//Debug.println("Liquid: Running 2 calculation");
 			runCalculationThreads(Calculator.CALC_DENSITIES_PRESSURES);
 			runCalculationThreads(Calculator.CALC_FORCES);
 			runCalculationThreads(Calculator.CALC_UPDATE);
-
-//			while (mCalc1.getRun() || mCalc2.getRun() || mCalc3.getRun() || mCalc4.getRun()) {
-//				try {
-//					synchronized (this) {
-//						Debug.println("Liquid: Waiting on 2 calculation");
-//						wait();
-//					}
-//				} catch (InterruptedException e) {
-//					e.printStackTrace();
-//				}
-//			}
 		}
-
 		
-		
+		//Update collidable objects
+		for(CollidableSphere c : mCollidables){
+			c.update();
+		}
 
 		timer.update();
 		timer.println("Update forces");
@@ -215,6 +187,19 @@ public class Liquid {
 
 		timer.update();
 		timer.println("Marching cubes ");
+	}
+
+	private void waitOnStart() {
+		while(!mIsStarted){
+			synchronized(this){
+				try {
+					this.wait();
+				} catch (InterruptedException e) {
+					e.printStackTrace();
+				}
+			}
+		}
+		
 	}
 
 	public Particle getParticle(int particleID) {
@@ -271,6 +256,15 @@ public class Liquid {
 	 */
 	public void setDrawMode(int drawMode) {
 		mDrawMode = drawMode;
+	}
+	
+	/**
+	 * Gravity force in negative y-axis
+	 * 
+	 * @return
+	 */
+	public static Vector3f gravity() {
+		return new Vector3f(0, -g, 0);
 	}
 
 	public class Boundaries {
@@ -336,18 +330,7 @@ public class Liquid {
 
 		@Override
 		public void run() {
-//			while (true) {
-//				while (!this.run) {
-//					synchronized (this) {
-//						try {
-//							ready = true;
-//							Debug.println("Calculator: " + mId + " Calculator waiting  on start");
-//							this.wait();
-//						} catch (InterruptedException e) {
-//							e.printStackTrace();
-//						}
-//					}
-//				}
+
 				switch (mMode) {
 				case CALC_DENSITIES_PRESSURES:
 					for (Particle particle :  mParticles) {
@@ -368,13 +351,6 @@ public class Liquid {
 				
 
 				switchMode();
-				
-//				run=false;
-//				synchronized (mLiquid) {
-//					Debug.println("Calculator: " + mId + " Done, notify");
-//					mLiquid.notify();
-//				}
-//			}
 		}
 
 		private void switchMode() {
@@ -392,5 +368,18 @@ public class Liquid {
 			return run;
 		}
 		
+	}
+
+	public void setIsStarted(boolean b) {
+		mIsStarted = b;
+		
+	}
+
+	public boolean isStarted() {
+		return mIsStarted;
+	}
+
+	public Vector<CollidableSphere> getCollidables() {
+		return mCollidables;
 	}
 }

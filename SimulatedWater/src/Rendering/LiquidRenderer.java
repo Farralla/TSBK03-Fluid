@@ -1,9 +1,15 @@
 package Rendering;
 
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL15.*;
-import static org.lwjgl.opengl.GL30.*;
-import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
+import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL20.glGetUniformLocation;
+import static org.lwjgl.opengl.GL20.glUniform1;
+import static org.lwjgl.opengl.GL20.glUniform3;
+import static org.lwjgl.opengl.GL20.glUniformMatrix4;
+import static org.lwjgl.opengl.GL20.glUseProgram;
 
 import java.nio.FloatBuffer;
 import java.util.Vector;
@@ -11,17 +17,14 @@ import java.util.Vector;
 import marching_cubes.MCGrid;
 import marching_cubes.MCTriangle;
 
-import org.lwjgl.LWJGLException;
 import org.lwjgl.input.Keyboard;
-import org.lwjgl.opengl.Drawable;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
-
-import com.badlogic.gdx.utils.BufferUtils;
 
 import Utils.Debug;
 import Utils.GLUtils;
 import Utils.MathUtils;
+import data_types.CollidableSphere;
 import data_types.Liquid;
 import data_types.Particle;
 
@@ -38,10 +41,10 @@ public class LiquidRenderer extends Renderer {
 	private Vector3f[] mLightSourcesDirectionPositions;
 	
 	//shader programs
-	private int particleProgram, surfaceProgram;
+	private int particleProgram, surfaceProgram, modelProgram;
 	
 	//Models
-	private Model mParticleModel;
+	private Model mParticleModel, mSphereModel;
 	
 	//The fluid
 	private Liquid mLiquid;
@@ -62,6 +65,7 @@ public class LiquidRenderer extends Renderer {
 	public void loadShaders() {
 		particleProgram = GLUtils.loadShaders("src/particleShader.vert", "src/particleShader.frag");
 		surfaceProgram = GLUtils.loadShaders("src/surfaceShader.vert", "src/surfaceShader.frag");
+		modelProgram  = GLUtils.loadShaders("src/modelShader.vert", "src/modelShader.frag");
 	}
 	
 	public void setupLight(){
@@ -187,11 +191,6 @@ public class LiquidRenderer extends Renderer {
 	 * @param liquid
 	 */
 	private void drawParticles(Liquid liquid) {
-
-		// Update camera
-		mCamera.update();
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(particleProgram);
 
 		// Upload viewMAtrix to shader
@@ -200,7 +199,7 @@ public class LiquidRenderer extends Renderer {
 		for (Particle particle : liquid.getParticleList()) {
 			// Upload modelMatrix to shader
 			Matrix4f modelMatrix = MathUtils.transMatrix(particle.getPosition());
-			modelMatrix.scale(new Vector3f(0.01f, 0.01f, 0.01f));
+			modelMatrix.scale(new Vector3f(0.006f, 0.006f, 0.006f));
 			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
 			modelMatrixBuffer.clear();
 			glUniformMatrix4(glGetUniformLocation(particleProgram, "modelMatrix"), true, modelMatrixBuffer);
@@ -219,10 +218,6 @@ public class LiquidRenderer extends Renderer {
 	 * @param grid
 	 */
 	private void drawTriangles(MCGrid grid) {
-		// Update camera
-		mCamera.update();
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
@@ -247,14 +242,9 @@ public class LiquidRenderer extends Renderer {
 	}
 	
 	/**
-	 * TODO Not working correcly, indices need fixing
-	 * Still as laggy as with triangle approach
 	 * @param grid
 	 */
 	private void drawLiquid(MCGrid grid){
-		mCamera.update();
-
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
@@ -275,21 +265,40 @@ public class LiquidRenderer extends Renderer {
 			model.draw(surfaceProgram, "in_Position", "in_Normal", null);
 			model.clear();
 		}
-
-		
 		glUseProgram(0);
 	}
 	
-	public int getParticleProgram(){
-		return particleProgram;
+	private void drawSpheres() {
+		glUseProgram(modelProgram);
+
+		// Upload viewMAtrix to shader
+		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		glUniformMatrix4(glGetUniformLocation(modelProgram, "viewMatrix"), true, viewMatrixBuffer);
+		for (CollidableSphere c : mLiquid.getCollidables()) {
+			// Upload modelMatrix to shader
+			Matrix4f modelMatrix = MathUtils.transMatrix(c.getPosition());
+			modelMatrix.scale(new Vector3f(c.getRadius(), c.getRadius(), c.getRadius()));
+			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+			modelMatrixBuffer.clear();
+			glUniformMatrix4(glGetUniformLocation(modelProgram, "modelMatrix"), true, modelMatrixBuffer);
+
+			mSphereModel.draw(modelProgram, "in_Position", "in_Normal", null);
+		}
+		glUseProgram(0);
+		
 	}
 	
 	@Override
 	protected void draw(){
+		// Update camera
+		mCamera.update();
+
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		checkKeys();
 		drawLiquid(mLiquid);
+		drawSpheres();
 	}
-	
+
 	public void checkKeys(){
 		if(Keyboard.isKeyDown(Keyboard.KEY_1)){
 			mLiquid.setDrawMode(Liquid.DRAW_PARTICLES);
@@ -299,6 +308,18 @@ public class LiquidRenderer extends Renderer {
 		}
 		else if(Keyboard.isKeyDown(Keyboard.KEY_3)){
 			mLiquid.setDrawMode(Liquid.DRAW_TRIANGLES);
+		}
+		else if(Keyboard.isKeyDown(Keyboard.KEY_RETURN)){
+			if(!mLiquid.isStarted()){
+				mLiquid.setIsStarted(true);
+				synchronized(mLiquid){
+					mLiquid.notify();
+				}
+
+			}else{
+				mLiquid.setIsStarted(false);
+			}
+
 		}
 		else if(Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)){
 			if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)){
@@ -315,18 +336,25 @@ public class LiquidRenderer extends Renderer {
 		}
 	}
 	
+	private void setupSphere(){
+		SphereCreator sphere = new SphereCreator(1,20,20);
+		mSphereModel = new Model(sphere.getVertices(),sphere.getNormals(),null,null,sphere.getIndices());
+	}
+
+	
 	@Override
 	protected void init(){
 		super.init();
 		glEnable(GL_DEPTH_TEST);
 		//Setup cube for particles
 		setupCube();
+		setupSphere();
 		Debug.println("CUBE SETUP", Debug.MAX_DEBUG);
 		
 		setupLight();
 		Debug.println("LIGHT SETUP", Debug.MAX_DEBUG);
 		
-		//Upload projectionMatrix to shader
+		//Upload projectionMatrix to shaders
 		glUseProgram(particleProgram);
 		FloatBuffer projectionMatrixBuffer = matrix4Buffer(mCamera.getProjectionMatrix());
 		glUniformMatrix4(glGetUniformLocation(particleProgram,"projectionMatrix"), true, projectionMatrixBuffer);
@@ -334,6 +362,10 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(surfaceProgram);
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram,"projectionMatrix"), true, projectionMatrixBuffer);
 		uploadLightToShader(surfaceProgram);
+		
+		glUseProgram(modelProgram);
+		glUniformMatrix4(glGetUniformLocation(modelProgram,"projectionMatrix"), true, projectionMatrixBuffer);
+		uploadLightToShader(modelProgram);
 	}
 
 }
