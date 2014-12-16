@@ -1,24 +1,5 @@
-import java.io.FileInputStream;
-import java.io.InputStream;
-import java.text.MessageFormat;
-
-import org.lwjgl.opengl.Display;
-import org.lwjgl.util.vector.Vector3f;
-
-
-
-
-
-
-
-import com.momchil_atanasov.data.front.parser.IOBJParser;
-import com.momchil_atanasov.data.front.parser.OBJModel;
-import com.momchil_atanasov.data.front.parser.OBJParser;
-
 import Rendering.LiquidRenderer;
-import Rendering.Renderer;
 import Utils.Debug;
-import Utils.GLUtils;
 import Utils.Timer;
 import data_types.Liquid;
 
@@ -32,7 +13,7 @@ public class Simulation {
 	public static void main(String[] args) throws Exception {
 		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(2000,0.3f,0.02f,0.03f);
+		Liquid liquid = new Liquid(1500,0.3f,0.02f,14f);
 		
 		//Initiate renderer
 		LiquidRenderer renderingUnit= new LiquidRenderer(WIDTH,HEIGHT,liquid);

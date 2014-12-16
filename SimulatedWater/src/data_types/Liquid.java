@@ -41,8 +41,8 @@ public class Liquid {
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
 	
-	public static final float g = 2f; // Gravity
-	public static double dT = 0.075;
+	public static final float g = 1f; // Gravity
+	public static double dT = 0.05;
 
 	// Liquid bounds
 	private Boundaries mBoundaries;
@@ -142,7 +142,7 @@ public class Liquid {
 
 	public void update() {
 		
-		waitOnStart();
+		
 		
 		Timer timer = new Timer();
 		timer.off();
@@ -187,6 +187,9 @@ public class Liquid {
 
 		timer.update();
 		timer.println("Marching cubes ");
+		
+		//Waits after one iteration
+		waitOnStart();
 	}
 
 	private void waitOnStart() {

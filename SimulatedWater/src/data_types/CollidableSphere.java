@@ -40,7 +40,6 @@ public class CollidableSphere extends Collidable {
 
 		synchronized (this) {
 			mPosition = Vector3f.add(mPosition, (Vector3f) mVelocity.scale((float) Liquid.dT), null);
-			Debug.println(mPosition, Debug.MAX_DEBUG);
 		}
 
 		mForce.set(0, 0, 0);

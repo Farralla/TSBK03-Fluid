@@ -58,16 +58,16 @@ public class MCGrid {
 		mScale = scale;
 		mSize = size;
 
-		int numBoxes = (int) (size / scale);
+		int numBoxes = (int) (size / scale +4);
 		mSideLength = numBoxes;
 
 		int id = 0;
 		for (int z = 0; z < numBoxes; z++) {
-			float zPos = MathUtils.toDecimals(z * scale + scale / 2, 4);
+			float zPos = MathUtils.toDecimals(z * scale - 3*scale / 2, 4);
 			for (int y = 0; y < numBoxes; y++) {
-				float yPos = MathUtils.toDecimals(y * scale + scale / 2, 4);
+				float yPos = MathUtils.toDecimals(y * scale - 3*scale / 2, 4);
 				for (int x = 0; x < numBoxes; x++) {
-					float xPos = MathUtils.toDecimals(x * scale + scale / 2, 4);
+					float xPos = MathUtils.toDecimals(x * scale - 3*scale / 2, 4);
 					Vector3f pos = new Vector3f(xPos, yPos, zPos);
 					mCubes.add(new MCCube(pos, scale, id));
 					id++;
@@ -133,7 +133,7 @@ public class MCGrid {
 		else
 			cubePosZ = MathUtils.toDecimals((pos.z-zInCube), 4);
 		
-		int cubeId = (int) Math.round((cubePosX/mScale + cubePosY * mSideLength/mScale + cubePosZ * mSideLength*mSideLength/mScale));
+		int cubeId = (int) Math.round( 2 + cubePosX/mScale +  mSideLength*(2 + cubePosY/mScale) + mSideLength*mSideLength*( 2 + cubePosZ/mScale));
 		
 		return mCubes.get(cubeId);
 	}

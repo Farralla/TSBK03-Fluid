@@ -600,44 +600,6 @@ public class MCCube {
 		}
 	}
 
-	/**
-	 * Finds all 27 cubes in a 3*3*3 area around this cube This cube is included
-	 * 
-	 * @param allCubes
-	 *            A vector with all cubes
-	 */
-	public void calc3by3Neighbourhood(Vector<MCCube> allCubes) {
-		int sideLength = (int) Math.ceil(Math.pow(allCubes.size(), 1.0 / 3.0));
-		int cubeId = mId;
-		for (int x = -1; x < 2; x++) {
-			for (int y = -1; y < 2; y++) {
-				for (int z = -1; z < 2; z++) {
-					cubeId = (int) (mId + x + y * sideLength + z * Math.pow(sideLength, 2));
-
-					if (cubeId >= 0 && cubeId < allCubes.size()) {
-						MCCube cube = allCubes.get(cubeId);
-						float distance = Vector3f.sub(mPos, cube.getPosition(), null).length();
-
-						if (MathUtils.toDecimals(distance, 2) <= MathUtils.toDecimals(
-								(float) Math.sqrt(3 * Math.pow(mScale, 2)), 2)) {
-							m3by3Neigbourhood.add(cube);
-							
-							for (MCVoxel voxel : cube.getVoxels()) {
-								if (mVoxelsInRange.contains(voxel))
-									continue;
-								else
-									mVoxelsInRange.add(voxel);
-
-							}
-
-						}
-					}
-
-				}
-			}
-		}
-	}
-
 	public synchronized Vector<MCVoxel> getNearbyVoxels(){
 		return mVoxelsInRange;
 	}
@@ -665,6 +627,7 @@ public class MCCube {
 						if (MathUtils.toDecimals(distance, 2) <= MathUtils.toDecimals(
 								(float) Math.sqrt(3 * Math.pow(mScale, 2)), 2)) {
 							mCubesInRange.add(cube);
+							
 							for (MCVoxel voxel : cube.getVoxels()) {
 								if (mVoxelsInRange.contains(voxel))
 									continue;
