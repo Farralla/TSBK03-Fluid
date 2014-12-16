@@ -16,4 +16,7 @@ abstract class Boundaries {
 	}
 	
 	public abstract void Rotate(Vector3f axis, float degrees);
+	
+	public abstract void checkCollisions(Particle particle);
+	public abstract void checkCollisions(CollidableSphere c);
 }

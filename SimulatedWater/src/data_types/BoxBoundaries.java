@@ -10,6 +10,7 @@ import org.lwjgl.util.vector.Vector3f;
 import Utils.MathUtils;
 
 public class BoxBoundaries extends Boundaries {
+	private static float EPSILON = 0.00001f;
 	private float mSideX, mSideY, mSideZ;
 	private ArrayList<Vector3f> mCorners;
 	private ArrayList<Vector3f> mBaseVectors;
@@ -45,6 +46,7 @@ public class BoxBoundaries extends Boundaries {
 
 		// base vectors
 		Vector3f bVec = new Vector3f(1, 0, 0);
+		mBaseVectors = new ArrayList<Vector3f>();
 		mBaseVectors.add(bVec);
 		mNormals.add(bVec);
 		mNormals.add((Vector3f) bVec.scale(-1));
@@ -99,6 +101,7 @@ public class BoxBoundaries extends Boundaries {
 	 * 
 	 * @param particle
 	 */
+	@Override
 	public void checkCollisions(Particle particle) {
 		Vector3f p;
 		Vector3f n;
@@ -112,8 +115,18 @@ public class BoxBoundaries extends Boundaries {
 			
 			if(d <= Particle.getH()){
 				//COLLISION!
+				if(d < 0)
+					while(d<0){
+						r = Vector3f.sub(particle.getPosition(), p, null);
+						d = Vector3f.dot(n,r);
+						particle.setPosition(Vector3f.add(
+								particle.getPosition(),
+								(Vector3f) n.scale(-EPSILON) , 
+								null));
+					}
+					
 				Vector3f rvec = (Vector3f) n.scale(-d);
-				particle.handleCollision(rvec,particle.getMass(),mDensity);
+				particle.handleCollision(rvec,Particle.getMass(),mDensity);
 			}
 		}
 	}
@@ -173,6 +186,36 @@ public class BoxBoundaries extends Boundaries {
 			return mCorners.get(1);
 		}
 		return mPosition;
+	}
+
+	public float getXHigh() {
+		return mCorners.get(6).x;
+	}
+
+	public float getYHigh() {
+		return mCorners.get(6).y;
+	}
+
+	public float getZHigh() {
+		return mCorners.get(6).z;
+	}
+	
+	public float getXLow() {
+		return mCorners.get(0).x;
+	}
+
+	public float getYLow() {
+		return mCorners.get(0).y;
+	}
+
+	public float getZLow() {
+		return mCorners.get(0).z;
+	}
+
+	@Override
+	public void checkCollisions(CollidableSphere c) {
+		// TODO Auto-generated method stub
+		
 	}
 
 }

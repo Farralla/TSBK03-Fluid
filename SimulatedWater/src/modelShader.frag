@@ -15,7 +15,7 @@ uniform mat4 modelMatrix;
 
 void main(void)
 {
-	float transparency = 0.9;
+	float transparency = 0.1;
 	
 	vec3 eyeDirection = vec3(normalize(-surf)); 
 	vec3 reflectedLightDir, lightDir; 

@@ -11,7 +11,7 @@ public class Simulation {
 	public static void main(String[] args) throws Exception {
 		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(500,0.4f,0.02f,200f);
+		Liquid liquid = new Liquid(1000,0.3f,0.02f,450f);
 		
 		//Initiate renderer
 		LiquidRenderer renderingUnit= new LiquidRenderer(WIDTH,HEIGHT,liquid);
@@ -22,7 +22,7 @@ public class Simulation {
 		//Timer
 		Timer timer = new Timer();
 		timer.init();
-		timer.on();
+		timer.off();
 
 		
 		//Initiate Loop

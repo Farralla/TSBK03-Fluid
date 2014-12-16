@@ -230,7 +230,7 @@ public class Particle {
 
 			Vector3f rvec = Vector3f.sub(voxel.getPosition(), mPosition, null);
 			if (rvec.length() < mH) {
-				voxel.addValue(0.00001f * mDensity * mKernel.W_poly6(rvec));
+				voxel.addValue(0.000005f * mDensity * mKernel.W_poly6(rvec));
 				// float s = 1 - rvec.length() / mH;
 				// Vector3f val = (Vector3f) rvec.scale(s);
 				// voxel.addToValue(i, val);

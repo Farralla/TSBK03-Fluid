@@ -41,7 +41,7 @@ public class Liquid {
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
 	
-	public static final float g = 20f; // Gravity
+	public static Vector3f g = new Vector3f(0,-20,0); // Gravity
 	public static double dT = 0.01;
 
 	// Liquid bounds
@@ -266,13 +266,14 @@ public class Liquid {
 	 * @return
 	 */
 	public static Vector3f gravity() {
-		return new Vector3f(0, -g, 0);
+		return new Vector3f(g);
 	}
 
 	public class Boundaries {
 		public String type;
+		private Vector3f mPosition;
+		private float mSize;
 		// Liquid bounds
-		Vector3f[] corners;
 		public float xLow;
 		public float xHigh;
 		public float yLow;
@@ -300,6 +301,16 @@ public class Liquid {
 			yHigh = size;
 			zLow = 0;
 			zHigh = size;
+			mPosition = new Vector3f(size/2,size/2,size/2);
+			mSize = size;
+		}
+		
+		public Vector3f getPosition(){
+			return mPosition;
+		}
+		
+		public float getSize(){
+			return mSize;
 		}
 
 		public boolean isSideConstraintsOn() {
@@ -384,5 +395,9 @@ public class Liquid {
 
 	public Vector<CollidableSphere> getCollidables() {
 		return mCollidables;
+	}
+
+	public static void setGravity(Vector3f vec) {
+		g = vec;
 	}
 }

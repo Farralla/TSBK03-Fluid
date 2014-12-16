@@ -1,15 +1,8 @@
 package Rendering;
 
-import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
-import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
-import static org.lwjgl.opengl.GL11.glClear;
-import static org.lwjgl.opengl.GL11.glEnable;
-import static org.lwjgl.opengl.GL20.glGetUniformLocation;
-import static org.lwjgl.opengl.GL20.glUniform1;
-import static org.lwjgl.opengl.GL20.glUniform3;
-import static org.lwjgl.opengl.GL20.glUniformMatrix4;
-import static org.lwjgl.opengl.GL20.glUseProgram;
+import static org.lwjgl.opengl.GL11.*;
+import static org.lwjgl.opengl.GL20.*;
+import static org.lwjgl.opengl.GL30.*;
 
 import java.nio.FloatBuffer;
 import java.util.Vector;
@@ -26,6 +19,7 @@ import Utils.GLUtils;
 import Utils.MathUtils;
 import data_types.CollidableSphere;
 import data_types.Liquid;
+import data_types.Liquid.Boundaries;
 import data_types.Particle;
 
 /**
@@ -44,7 +38,7 @@ public class LiquidRenderer extends Renderer {
 	private int particleProgram, surfaceProgram, modelProgram;
 	
 	//Models
-	private Model mParticleModel, mSphereModel;
+	private Model mParticleModel, mSphereModel, mGlassModel;
 	
 	//The fluid
 	private Liquid mLiquid;
@@ -135,6 +129,7 @@ public class LiquidRenderer extends Renderer {
 				-0.5f, 0.5f, 0.5f,
 				-0.5f, 0.5f, -0.5f
 		};
+		
 
 		final short[] indices = {
 				0, 1, 2, 0, 2, 3, // front
@@ -146,6 +141,87 @@ public class LiquidRenderer extends Renderer {
 		};
 
 		mParticleModel = new Model(vertices, null, null, null, indices);
+	}
+	
+	/**
+	 * Sets up a 3d cube
+	 */
+	private void setupGlass() {
+
+		// The 4 vertices (corners of a particle)
+		final float[] vertices = {
+				// Front face
+				-0.5f, -0.5f, 0.5f,
+				0.5f, -0.5f, 0.5f,
+				0.5f, 0.5f, 0.5f,
+				-0.5f, 0.5f, 0.5f,
+
+				// Back face
+				-0.5f, -0.5f, -0.5f,
+				-0.5f, 0.5f, -0.5f,
+				0.5f, 0.5f, -0.5f,
+				0.5f, -0.5f, -0.5f,
+
+				// Bottom face
+				-0.5f, -0.5f, -0.5f,
+				0.5f, -0.5f, -0.5f,
+				0.5f, -0.5f, 0.5f,
+				-0.5f, -0.5f, 0.5f,
+
+				// Right face
+				0.5f, -0.5f, -0.5f,
+				0.5f, 0.5f, -0.5f,
+				0.5f, 0.5f, 0.5f,
+				0.5f, -0.5f, 0.5f,
+
+				// Left face
+				-0.5f, -0.5f, -0.5f,
+				-0.5f, -0.5f, 0.5f,
+				-0.5f, 0.5f, 0.5f,
+				-0.5f, 0.5f, -0.5f
+		};
+		
+		final float[] normals = {
+				// Front face
+				0f, 0f, 1f,
+				0f, 0f, 1f,
+				0f, 0f, 1f,
+				0f, 0f, 1f,
+
+				// Back face
+				0f, 0f, -1f,
+				0f, 0f, -1f,
+				0f, 0f, -1f,
+				0f, 0f, -1f,
+
+				// Bottom face
+				0f, -1f, 0f,
+				0f, -1f, 0f,
+				0f, -1f, 0f,
+				0f, -1f, 0f,
+
+				// Right face
+				1f, 0f, 0f,
+				1f, 0f, 0f,
+				1f, 0f, 0f,
+				1f, 0f, 0f,
+
+				// Left face
+				-1f, 0f, 0f,
+				-1f, 0f, 0f,
+				-1f, 0f, 0f,
+				-1f, 0f, 0f,
+		};
+
+		final short[] indices = {
+				0, 1, 2, 0, 2, 3, // front
+				4, 5, 6, 4, 6, 7, // back
+				8, 9, 10, 8, 10, 11,// bottom
+				12, 13, 14, 12, 14, 15, // right
+				16, 17, 18, 16, 18, 19, // left
+		};
+
+		mGlassModel = new Model(vertices, normals, null, null, indices);
 	}
 
 	/**
@@ -174,29 +250,28 @@ public class LiquidRenderer extends Renderer {
 	 * Draws liquid depending on mode
 	 * @param liquid the liquid to draw
 	 */
-	public void drawLiquid(Liquid liquid) {
-		if (liquid.drawMode() == Liquid.DRAW_PARTICLES) {
-			drawParticles(liquid);
+	public void drawLiquid() {
+		if (mLiquid.drawMode() == Liquid.DRAW_PARTICLES) {
+			drawParticles();
 		}
-		else if (liquid.drawMode() == Liquid.DRAW_SURFACE) {
-			drawLiquid(liquid.getGrid());
+		else if (mLiquid.drawMode() == Liquid.DRAW_SURFACE) {
+			drawLiquid(mLiquid.getGrid());
 		}
-		else if(liquid.drawMode() == Liquid.DRAW_TRIANGLES){
-			drawTriangles(liquid.getGrid());
+		else if(mLiquid.drawMode() == Liquid.DRAW_TRIANGLES){
+			drawTriangles(mLiquid.getGrid());
 		}
 	}
 
 	/**
 	 * Draws the particles in shape of cubes
-	 * @param liquid
 	 */
-	private void drawParticles(Liquid liquid) {
+	private void drawParticles() {
 		glUseProgram(particleProgram);
 
 		// Upload viewMAtrix to shader
 		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(particleProgram, "viewMatrix"), true, viewMatrixBuffer);
-		for (Particle particle : liquid.getParticleList()) {
+		for (Particle particle : mLiquid.getParticleList()) {
 			// Upload modelMatrix to shader
 			Matrix4f modelMatrix = MathUtils.transMatrix(particle.getPosition());
 			modelMatrix.scale(new Vector3f(0.006f, 0.006f, 0.006f));
@@ -285,7 +360,33 @@ public class LiquidRenderer extends Renderer {
 			mSphereModel.draw(modelProgram, "in_Position", "in_Normal", null);
 		}
 		glUseProgram(0);
+	}
+	
+	private void drawGlass(){
+		glUseProgram(modelProgram);
 		
+		Boundaries b  = mLiquid.getBoundaries();
+		glEnable(GL_BLEND);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+		//glEnable(GL_CULL_FACE);
+		//glUniform4f(glGetUniformLocation(modelProgram, "color"), 0.2f, 0.2f, 0.2f,0.2f);
+		
+		// Upload viewMAtrix to shader
+		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		glUniformMatrix4(glGetUniformLocation(modelProgram, "viewMatrix"), true, viewMatrixBuffer);
+		// Upload modelMatrix to shader
+		Matrix4f modelMatrix = MathUtils.transMatrix(b.getPosition());
+		modelMatrix.scale(new Vector3f(b.getSize()+0.04f,b.getSize()+0.04f,b.getSize()+0.04f));
+		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+		modelMatrixBuffer.clear();
+		
+		glUniformMatrix4(glGetUniformLocation(modelProgram, "modelMatrix"), true, modelMatrixBuffer);
+
+		mGlassModel.draw(modelProgram, "in_Position", "in_Normal", null);
+		
+		glDisable(GL_BLEND);
+		glDisable(GL_CULL_FACE);
+		glUseProgram(0);
 	}
 	
 	@Override
@@ -295,8 +396,9 @@ public class LiquidRenderer extends Renderer {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		checkKeys();
-		drawLiquid(mLiquid);
+		drawLiquid();
 		drawSpheres();
+		drawGlass();
 	}
 
 	public void checkKeys(){
@@ -331,8 +433,25 @@ public class LiquidRenderer extends Renderer {
 				Debug.println("Isolevel: " + mLiquid.getGrid().getIsoLevel(),Debug.MAX_DEBUG);
 			}
 		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_O)){
-			mLiquid.getBoundaries().setSideConstraintsOn(false);
+		
+		if(Keyboard.isKeyDown(Keyboard.KEY_LEFT)){
+			Vector3f vec = Liquid.gravity();
+			Matrix4f rotMat = new Matrix4f();
+			rotMat.setIdentity();
+			rotMat.rotate(0.05f, new Vector3f(0,0,1));
+			vec = MathUtils.multMat4Vec3(rotMat, vec);
+			Liquid.setGravity(vec);
+		}
+		else if(Keyboard.isKeyDown(Keyboard.KEY_RIGHT)){
+			Vector3f vec = Liquid.gravity();
+			Matrix4f rotMat = new Matrix4f();
+			rotMat.setIdentity();
+			rotMat.rotate(0.05f, new Vector3f(0,0,-1));
+			vec = MathUtils.multMat4Vec3(rotMat, vec);
+			Liquid.setGravity(vec);
+		}
+		else if(Keyboard.isKeyDown(Keyboard.KEY_G)){
+			Liquid.setGravity((Vector3f) Liquid.gravity().scale(-1f));
 		}
 	}
 	
@@ -349,6 +468,7 @@ public class LiquidRenderer extends Renderer {
 		//Setup cube for particles
 		setupCube();
 		setupSphere();
+		setupGlass();
 		Debug.println("CUBE SETUP", Debug.MAX_DEBUG);
 		
 		setupLight();
