@@ -15,8 +15,8 @@ public abstract class Collidable {
 		mForce = new Vector3f();
 		mVelocity = new Vector3f();
 		mRadius = radius;
-		mDensity = 300f;
-		mMass = 0.0001f;
+		mDensity = 1500f;
+		mMass = 0.00015f;
 	}
 	
 	public Collidable(Vector3f position, float radius, float mass, float density) {

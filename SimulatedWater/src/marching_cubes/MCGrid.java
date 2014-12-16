@@ -103,7 +103,7 @@ public class MCGrid {
 	public void calculateNeighbourhoods(){
 		for(MCCube cube:mCubes){
 			cube.addNeighbours(mCubes);
-			cube.calcNeighbourhood(this,2);
+			cube.calcNeighbourhood(this,1);
 		}
 	}
 	

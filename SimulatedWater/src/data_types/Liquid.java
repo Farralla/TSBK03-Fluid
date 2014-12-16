@@ -41,8 +41,8 @@ public class Liquid {
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
 	
-	public static final float g = 1f; // Gravity
-	public static double dT = 0.05;
+	public static final float g = 20f; // Gravity
+	public static double dT = 0.01;
 
 	// Liquid bounds
 	private Boundaries mBoundaries;
@@ -78,7 +78,8 @@ public class Liquid {
 	public Liquid(int numberOfParticles, float size, float gridScale, float isoLevel) {
 		setNumberOfParticles(numberOfParticles);
 		mParticleList = new Vector<Particle>();
-		mBoundaries = new Boundaries(size);
+		float boundSize = (float) (Math.sqrt(0.5)*size);
+		mBoundaries = new Boundaries(boundSize);
 		mMCGrid = new MCGrid(size, gridScale, isoLevel);
 		mCollidables = new Vector<CollidableSphere>();
 
@@ -110,19 +111,15 @@ public class Liquid {
 	private void runCalculationThreads(int mode){	
 		Thread t2 = new Thread(mCalc1);
 		t2.setPriority(Thread.MAX_PRIORITY);
-		//t1.setDaemon(true);
 		
 		Thread t3 = new Thread(mCalc2);
 		t3.setPriority(Thread.MAX_PRIORITY);
-		//t2.setDaemon(true);
 		
 		Thread t4 = new Thread(mCalc3);
 		t4.setPriority(Thread.MAX_PRIORITY);
-		//t3.setDaemon(true);
 		
 		Thread t5 = new Thread(mCalc4);
 		t5.setPriority(Thread.MAX_PRIORITY);
-		//t4.setDaemon(true);
 		
 		t2.start();
 		t3.start();
@@ -151,9 +148,6 @@ public class Liquid {
 		timer.update();
 		timer.println("Reset scalar field");
 
-		timer.update();
-		timer.println("update Desnsities and pressures");
-
 		if (!multiThread) {
 			for (Particle particle : mParticleList) {
 				// Calculate densities and pressures of particles
@@ -174,13 +168,18 @@ public class Liquid {
 			runCalculationThreads(Calculator.CALC_UPDATE);
 		}
 		
+		timer.update();
+		timer.println("updated particles");
+		
 		//Update collidable objects
-		for(CollidableSphere c : mCollidables){
-			c.update();
-		}
+//		for(CollidableSphere c : mCollidables){
+//			c.update();
+//		}
+		mCollidables.get(0).update();
+		
 
 		timer.update();
-		timer.println("Update forces");
+		timer.println("Collision objects update");
 
 		// Polygonise surface
 		mMCGrid.march();
@@ -273,6 +272,7 @@ public class Liquid {
 	public class Boundaries {
 		public String type;
 		// Liquid bounds
+		Vector3f[] corners;
 		public float xLow;
 		public float xHigh;
 		public float yLow;

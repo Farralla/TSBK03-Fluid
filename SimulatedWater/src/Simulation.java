@@ -7,13 +7,11 @@ public class Simulation {
 		public static final int WIDTH = 640;
 		public static final int HEIGHT = 480;
 		
-		public static double timeStamp;
-		public static double dT;
 		
 	public static void main(String[] args) throws Exception {
 		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(1500,0.3f,0.02f,14f);
+		Liquid liquid = new Liquid(500,0.4f,0.02f,200f);
 		
 		//Initiate renderer
 		LiquidRenderer renderingUnit= new LiquidRenderer(WIDTH,HEIGHT,liquid);
@@ -24,7 +22,7 @@ public class Simulation {
 		//Timer
 		Timer timer = new Timer();
 		timer.init();
-		timer.off();
+		timer.on();
 
 		
 		//Initiate Loop

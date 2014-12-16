@@ -73,10 +73,10 @@ public class LiquidRenderer extends Renderer {
 		mLightSourcesColorsArr[1] = new Vector3f(1.0f, 0.9f, 0.7f);
 		
 		mSpecularExponent[0] = 1f;
-		mSpecularExponent[1] = 5f;
+		mSpecularExponent[1] = 60f;
 		
-		mLightSourcesDirectionPositions[0] = new Vector3f(0.3f, 0.2f, 0.7f);
-		mLightSourcesDirectionPositions[1] = new Vector3f(0.3f, 0.2f, 0.7f);
+		mLightSourcesDirectionPositions[0] = new Vector3f(0.15f, 1f, 0.6f);
+		mLightSourcesDirectionPositions[1] = new Vector3f(0.15f, 1f, 0.6f);
  	}
 	
 	public void uploadLightToShader(int program){

@@ -119,5 +119,6 @@ public class Renderer implements Runnable{
 			// Let the CPU synchronize with the GPU if GPU is tagging behind
 			Display.update();
 		}
+		System.exit(0);
 	}
 }

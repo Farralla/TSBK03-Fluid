@@ -23,20 +23,13 @@ public class CollidableSphere extends Collidable {
 		Vector3f acceleration = new Vector3f(0, 0, 0);
 
 		acceleration = Vector3f.add(
-				(Vector3f) mForce.scale((float) (Liquid.dT / mDensity)),
-				(Vector3f) Liquid.gravity().scale(0.1f),
+				(Vector3f) mForce.scale((float) (1 / mDensity)),
+				(Vector3f) Liquid.gravity().scale(0.05f),
 				null);
 
 		mVelocity = Vector3f.add(mVelocity,
 				(Vector3f) acceleration.scale((float) Liquid.dT),
 				null);
-		
-		// float k = 1 - mVelocity.length() * 0.01f;
-		// mVelocity.scale(k);
-
-		// if (mVelocity.length() > MAX_VELOCITY) {
-		// mVelocity.normalise().scale(MAX_VELOCITY);
-		// }
 
 		synchronized (this) {
 			mPosition = Vector3f.add(mPosition, (Vector3f) mVelocity.scale((float) Liquid.dT), null);

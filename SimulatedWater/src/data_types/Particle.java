@@ -37,9 +37,7 @@ public class Particle {
 	private static final float MAX_FORCE = 1000;
 	private static final float MAX_ACCELERATION = 40;
 	private static final float MAX_VELOCITY = 1f;
-
-	// time stamps
-	private double timeStamp;
+	private static final float EPSILON = 0.0001f;
 
 	// Member variables
 	private float mDensity;
@@ -71,12 +69,12 @@ public class Particle {
 	public static void setValues() {
 		// Tuning
 		mH = 0.03f; // cm ----> about 17 particles in radius
-		mK = 0.5f; //
-		mRho = 0.00001f; // kg/cm^3
-		mEta = 0.001f; // 1,002 mPa*s
-		mSigma = 0.001f;
-		mCFThresh = 30f;
-		mMass = 0.0004f;
+		mK = 1f; //
+		mRho = 950f; //Rest density kg/cm^3
+		mEta = 2f; // 1,002 mPa*s
+		mSigma = 0.1f;
+		mCFThresh = 50f;
+		mMass = 0.01f;
 		mColor = new Vector4f(1, 0, 0, 1);
 		mKernel = new Kernel(mH);
 	}
@@ -95,7 +93,6 @@ public class Particle {
 		mPosition = new Vector3f(position);
 		mForce = new Vector3f(0, 0, 0);
 		mNeighborList = new Vector<Particle>();
-		timeStamp = System.currentTimeMillis();
 		initialInCube(liquid.getGrid().getCubes());
 	}
 
@@ -115,20 +112,18 @@ public class Particle {
 			nearbyParticles.addAll(cube.getParticles());
 		}
 		updateNeighborList(nearbyParticles);
-		if (!mInCorner) {
-			calcDensity();
-		} else {
-			calcDensity();
-			mInCorner = false;
-		}
+		//Debug.println(mNeighborList.size(), Debug.MAX_DEBUG);
+		calcDensity();
 		calcPressure();
 	}
 
 	/**
-	 * /** 4 Calculate forces from pressure, viscosity and surface tension 5
-	 * Calculate all type of accelerations for each particle, and sum it up
-	 * particle, 6 Find new velocities and positions
+	 * Calculate forces from pressure, viscosity and surface tension
 	 * 
+	 * Calculate all type of accelerations for each particle, and sum it up
+	 * particle,
+	 * 
+	 * Find new velocities and positions 
 	 * @param liquid
 	 */
 	public void updateForces(Liquid liquid) {
@@ -138,6 +133,7 @@ public class Particle {
 		Vector3f surfaceTensionForce = new Vector3f(0, 0, 0);
 		Vector3f cS_grad = new Vector3f(0, 0, 0);
 		float cS_lap = 0;
+		
 		// Add contributions from all neighbors
 		for (Particle neighbor : mNeighborList) {
 			pressureForce = Vector3f.add(pressureForce, pressureForce(neighbor), null);
@@ -150,63 +146,58 @@ public class Particle {
 		if (gradientLength >= mCFThresh) {
 			surfaceTensionForce = (Vector3f) cS_grad.scale(-mSigma * cS_lap / gradientLength);
 		}
+		
 		// Update total force
 		mForce = Vector3f.add(mForce, pressureForce, null);
 		mForce = Vector3f.add(mForce, viscosityForce, null);
 		mForce = Vector3f.add(mForce, surfaceTensionForce, null);
-		//
-		// if (mForce.y > MAX_FORCE) {
-		// mForce.y = MAX_FORCE;
-		// }
-		/*
-		 * Can add interacttive forces here
-		 * 
-		 * TODO INTERACTIVE FORCES!
-		 */
-		// dT = 0.001*(System.currentTimeMillis() - timeStamp);
-		// System.out.println(dT);
 
 		// Update acceleration and velocity
 		mAcceleration = Vector3f.add(
-				(Vector3f) mForce.scale((float) (Liquid.dT / mDensity)),
+				(Vector3f) mForce.scale((float) (1 / mDensity)),
 				Liquid.gravity(),
 				null);
-		// if (mAcceleration.length() > MAX_ACCELERATION) {
-		// mAcceleration.normalise().scale(MAX_ACCELERATION);
-		// }
-
-		// float kA = 1 - mAcceleration.length() * 0.1f;
-		// mAcceleration.scale(kA);
 
 	}
 
+	/**
+	 * Updates velocity and position of particle
+	 * @param liquid
+	 */
 	public void update(Liquid liquid) {
 
-		checkBoundaries(liquid);
+		checkBoundaryCollisions(liquid);
 		checkCollisions(liquid);
+		
 		synchronized (this) {
 			mVelocity = Vector3f.add(mVelocity,
 					(Vector3f) mAcceleration.scale((float) Liquid.dT),
 					null);
+			Vector3f bNormal = new Vector3f(0,1,0);
+			bNormal.scale(Vector3f.dot(mVelocity,bNormal));
+			Vector3f velInBottomPlane = Vector3f.sub(mVelocity,bNormal,null);
+			//mVelocity.scale(0.4f);
+			mVelocity = Vector3f.add(mVelocity, (Vector3f) velInBottomPlane.scale(0.6f), null);
+//			Vector3f ut1 = Vector3f.add(mVelocity,(Vector3f) mAcceleration.scale((float) (-0.5f*Liquid.dT)),null);
+//			Vector3f ut2 = Vector3f.add(mVelocity,(Vector3f) mAcceleration.scale((float) (0.5f*Liquid.dT)),null);
+//			mVelocity = (Vector3f) Vector3f.add(ut1,ut2,null).scale(0.5f);
 		}
-		// float k = 1 - mVelocity.length() * 0.01f;
-		// mVelocity.scale(k);
-
-		// if (mVelocity.length() > MAX_VELOCITY) {
-		// mVelocity.normalise().scale(MAX_VELOCITY);
-		// }
 
 		synchronized (this) {
-			mPosition = Vector3f.add(mPosition, (Vector3f) mVelocity.scale((float) Liquid.dT), null);
+			mPosition = Vector3f.add(mPosition, (Vector3f) mVelocity.scale((float) (Liquid.dT)), null);
 		}
 
 		mForce.set(0, 0, 0);
 		mAcceleration.set(0, 0, 0);
+		
+		checkBoundaries(liquid);
+
 		// Update which cube the particle is in
 		updateInCube(liquid);
 		// Add density value to nearby grid cubes
 		updateNearbyCubes();
 	}
+
 
 	private void checkCollisions(Liquid liquid) {
 		Vector3f totForce = new Vector3f(0, 0, 0);
@@ -224,7 +215,7 @@ public class Particle {
 
 	}
 
-	private Vector3f handleCollision(Vector3f rvec, float mass, float density) {
+	public Vector3f handleCollision(Vector3f rvec, float mass, float density) {
 		Vector3f pressureForce = new Vector3f(0, 0, 0);
 		Vector3f viscosityForce = new Vector3f(0, 0, 0);
 		pressureForce = pressureForce(rvec, mass, density);
@@ -293,19 +284,10 @@ public class Particle {
 	 */
 	public void updateInCube(Liquid liquid) {
 
-		// Debug.println(cubeId, Debug.MAX_DEBUG);
 		MCCube newCube = liquid.getGrid().getCubeAt(mPosition);
-
 		mInCube.removeParticle(this);
 		mInCube = newCube;
 		mInCube.addParticle(this);
-
-		// if(!mInCube.containsParticle(this)){
-		// Debug.println("Particle position fail", Debug.MAX_DEBUG);
-		// Debug.println("Particle pos" + mPosition + " Cube pos: " +
-		// mInCube.getPosition(), Debug.MAX_DEBUG);
-		// Debug.println(" ", Debug.MAX_DEBUG);
-		// }
 	}
 
 	/**
@@ -401,7 +383,7 @@ public class Particle {
 	 * 
 	 * @return
 	 */
-	private Vector3f pressureForce(Vector3f rvec, float mass, float density) {
+	public Vector3f pressureForce(Vector3f rvec, float mass, float density) {
 		Vector3f pressureForce = new Vector3f();
 		float temp = -(mass * mPressure / (2 * density));
 		pressureForce = mKernel.GradW_pressure(rvec);
@@ -414,65 +396,85 @@ public class Particle {
 	 * 
 	 * @return
 	 */
-	private Vector3f viscosityForce(Vector3f rvec, float mass, float density) {
+	public Vector3f viscosityForce(Vector3f rvec, float mass, float density) {
 		Vector3f v_vec = new Vector3f();
 		v_vec = (Vector3f) mVelocity.scale(-1);
 		Vector3f viscosityForce = v_vec;
 		viscosityForce.scale(mEta * mass / density * mKernel.LapW_viscosity(rvec));
 		return viscosityForce;
 	}
-
-	private void checkBoundaries(Liquid liquid) {
+	
+	private void checkBoundaryCollisions(Liquid liquid) {
 		Boundaries b = liquid.getBoundaries();
-		float mass = 100000;
-		float density = 1000f;
+		float mass = 0.0001f;
+		float density = 50000f;
 		Vector3f rvec;
-		float k = 0.9f;
+		float r;
 		if (b.isSideConstraintsOn())
 		{
 			if (mPosition.x <= b.xLow + mH) {
-				if (mPosition.x <= b.xLow)
-					mPosition.x = b.xLow;
-				rvec = new Vector3f(mH, 0, 0);
+				r = b.xLow + mH - mPosition.x;
+				rvec = new Vector3f(r, 0, 0);
 				mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
-				mInCorner = true;
 			}
 			else if (mPosition.x >= b.xHigh - mH) {
-				if (mPosition.x >= b.xHigh)
-					mPosition.x = b.xHigh;
-				rvec = new Vector3f(-mH, 0, 0);
+				r = b.xHigh -+ mH - mPosition.x;
+				rvec = new Vector3f(r, 0, 0);
 				mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
-
-				mInCorner = true;
 			}
 
 			if (mPosition.z <= b.zLow + mH) {
-				if (mPosition.z <= b.zLow)
-					mPosition.z = b.zLow;
-				rvec = new Vector3f(0, 0, mH);
+				r = b.zLow + mH - mPosition.z;
+				rvec = new Vector3f(0, 0, r);
 				mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
-				mInCorner = true;
 			}
 			else if (mPosition.z >= b.zHigh - mH) {
-				if (mPosition.z >= b.zHigh)
-					mPosition.z = b.zHigh;
-				rvec = new Vector3f(0, 0, -mH);
+				r = b.zHigh - mH - mPosition.z;
+				rvec = new Vector3f(0, 0, r);
 				mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
-				mInCorner = true;
 			}
 		}
 
 		if (mPosition.y < b.yLow + mH) {
-			if (mPosition.y <= b.yLow)
-				mPosition.y = b.yLow;
-			rvec = new Vector3f(0, mH, 0);
+			r = b.yLow + mH - mPosition.y;
+			rvec = new Vector3f(0, r,0);
 			mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
 		}
 		else if (mPosition.y > b.yHigh - mH) {
-			if (mPosition.y >= b.yHigh)
-				mPosition.y = b.yHigh;
-			rvec = new Vector3f(0, -mH, 0);
+			r = b.yHigh - mH - mPosition.y;
+			rvec = new Vector3f(0, r,0);
 			mForce = Vector3f.add(mForce, handleCollision(rvec, mass, density), null);
+		}
+		
+	}
+
+	private void checkBoundaries(Liquid liquid) {
+		Boundaries b = liquid.getBoundaries();
+		float mass = 100f;
+		float density = 1000f;
+		Vector3f rvec;
+		float k = 0.9f;
+		if (b.isSideConstraintsOn()){
+			if (mPosition.x < b.xLow){
+					mPosition.x = b.xLow+EPSILON;
+			}
+			else if (mPosition.x > b.xHigh){
+					mPosition.x = b.xHigh-EPSILON;
+			}
+
+			if (mPosition.z < b.zLow){
+					mPosition.z = b.zLow+EPSILON;
+			}
+			else if (mPosition.z > b.zHigh){
+					mPosition.z = b.zHigh-EPSILON;
+			}
+		}
+
+		if (mPosition.y < b.yLow){
+				mPosition.y = b.yLow+EPSILON;
+		}
+		else if(mPosition.y > b.yHigh){
+				mPosition.y = b.yHigh-EPSILON;
 		}
 	}
 
@@ -501,8 +503,12 @@ public class Particle {
 	}
 
 	// Get functions
-	public float getMass() {
+	public static float getMass() {
 		return mMass;
+	}
+	
+	public static float getH(){
+		return mH;
 	}
 
 	public float getDensity() {
