@@ -1,8 +1,25 @@
-package Rendering;
+package rendering;
 
-import static org.lwjgl.opengl.GL11.*;
-import static org.lwjgl.opengl.GL20.*;
-import static org.lwjgl.opengl.GL30.*;
+import static org.lwjgl.opengl.GL11.GL_BACK;
+import static org.lwjgl.opengl.GL11.GL_BLEND;
+import static org.lwjgl.opengl.GL11.GL_COLOR_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_CULL_FACE;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_BUFFER_BIT;
+import static org.lwjgl.opengl.GL11.GL_DEPTH_TEST;
+import static org.lwjgl.opengl.GL11.GL_FRONT;
+import static org.lwjgl.opengl.GL11.GL_ONE_MINUS_SRC_ALPHA;
+import static org.lwjgl.opengl.GL11.GL_SRC_ALPHA;
+import static org.lwjgl.opengl.GL11.glBlendFunc;
+import static org.lwjgl.opengl.GL11.glClear;
+import static org.lwjgl.opengl.GL11.glCullFace;
+import static org.lwjgl.opengl.GL11.glDisable;
+import static org.lwjgl.opengl.GL11.glEnable;
+import static org.lwjgl.opengl.GL20.glGetUniformLocation;
+import static org.lwjgl.opengl.GL20.glUniform1;
+import static org.lwjgl.opengl.GL20.glUniform1i;
+import static org.lwjgl.opengl.GL20.glUniform3;
+import static org.lwjgl.opengl.GL20.glUniformMatrix4;
+import static org.lwjgl.opengl.GL20.glUseProgram;
 
 import java.nio.FloatBuffer;
 import java.util.Vector;
@@ -14,6 +31,7 @@ import org.lwjgl.input.Keyboard;
 import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
+import visuals.Skybox;
 import Utils.Debug;
 import Utils.GLUtils;
 import Utils.MathUtils;
@@ -35,18 +53,27 @@ public class LiquidRenderer extends Renderer {
 	private Vector3f[] mLightSourcesDirectionPositions;
 	
 	//shader programs
-	private int particleProgram, surfaceProgram, modelProgram;
+	private int particleProgram, surfaceProgram, modelProgram, reflectionProgram;
 	
 	//Models
-	private Model mParticleModel, mSphereModel, mGlassModel;
+	private Model mParticleModel, mSphereModel, mGlassModel, mFloorModel;
 	
 	//The fluid
 	private Liquid mLiquid;
+	
+	//Skybox
+	private Skybox mSkybox;
 
 	public LiquidRenderer(int WIDTH, int HEIGHT) {
 		super(WIDTH, HEIGHT);
 	}
 	
+	/**
+	 * Cteates a renderer and initates some vectors
+	 * @param WIDTH
+	 * @param HEIGHT
+	 * @param liquid
+	 */
 	public LiquidRenderer(int WIDTH, int HEIGHT, Liquid liquid){
 		super(WIDTH,HEIGHT);
 		mLiquid = liquid;
@@ -57,11 +84,15 @@ public class LiquidRenderer extends Renderer {
 	
 	@Override
 	public void loadShaders() {
-		particleProgram = GLUtils.loadShaders("src/particleShader.vert", "src/particleShader.frag");
-		surfaceProgram = GLUtils.loadShaders("src/surfaceShader.vert", "src/surfaceShader.frag");
-		modelProgram  = GLUtils.loadShaders("src/modelShader.vert", "src/modelShader.frag");
+		particleProgram = GLUtils.loadShaders("src/shaders/particleShader.vert", "src/shaders/particleShader.frag");
+		surfaceProgram = GLUtils.loadShaders("src/shaders/surfaceShader.vert", "src/shaders/surfaceShader.frag");
+		modelProgram  = GLUtils.loadShaders("src/shaders/modelShader.vert", "src/shaders/modelShader.frag");
+		reflectionProgram  = GLUtils.loadShaders("src/shaders/reflection.vert", "src/shaders/reflection.frag");
 	}
 	
+	/**
+	 * Sets up the light vectors
+	 */
 	public void setupLight(){
 		mLightSourcesColorsArr[0] = new Vector3f(0.5f, 0.45f, 0.35f);
 		mLightSourcesColorsArr[1] = new Vector3f(1.0f, 0.9f, 0.7f);
@@ -73,192 +104,51 @@ public class LiquidRenderer extends Renderer {
 		mLightSourcesDirectionPositions[1] = new Vector3f(0.15f, 1f, 0.6f);
  	}
 	
+	/**
+	 * Uploads light vectors to shader
+	 * @param program shader to upload light to
+	 */
 	public void uploadLightToShader(int program){
 		glUseProgram(program);
 		
-		FloatBuffer colorBuffer = vector3ArrayBuffer(mLightSourcesColorsArr);
+		FloatBuffer colorBuffer = GLUtils.vector3ArrayBuffer(mLightSourcesColorsArr);
 		glUniform3(glGetUniformLocation(program, "lightSourcesColorArr"), colorBuffer);
 		
-		FloatBuffer positionBuffer = vector3ArrayBuffer(mLightSourcesDirectionPositions);
+		FloatBuffer positionBuffer = GLUtils.vector3ArrayBuffer(mLightSourcesDirectionPositions);
 		glUniform3(glGetUniformLocation(program, "lightSourcesDirPosArr"), positionBuffer);
 		
-		FloatBuffer specularBuffer = floatArrayBuffer(mSpecularExponent);
+		FloatBuffer specularBuffer = GLUtils.floatArrayBuffer(mSpecularExponent);
 		glUniform1(glGetUniformLocation(program, "specularExponent"), specularBuffer);
 	}
 
 	/**
-	 * Sets up a 3d cube
+	 * Uploads the skybox texture to the reflection program
 	 */
-	private void setupCube() {
-
-		// The 4 vertices (corners of a particle)
-		final float[] vertices = {
-				// Front face
-				-0.5f, -0.5f, 0.5f,
-				0.5f, -0.5f, 0.5f,
-				0.5f, 0.5f, 0.5f,
-				-0.5f, 0.5f, 0.5f,
-
-				// Back face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f, 0.5f, -0.5f,
-				0.5f, 0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-
-				// Top face
-				-0.5f, 0.5f, -0.5f,
-				-0.5f, 0.5f, 0.5f,
-				0.5f, 0.5f, 0.5f,
-				0.5f, 0.5f, -0.5f,
-
-				// Bottom face
-				-0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f, 0.5f,
-				-0.5f, -0.5f, 0.5f,
-
-				// Right face
-				0.5f, -0.5f, -0.5f,
-				0.5f, 0.5f, -0.5f,
-				0.5f, 0.5f, 0.5f,
-				0.5f, -0.5f, 0.5f,
-
-				// Left face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f, -0.5f, 0.5f,
-				-0.5f, 0.5f, 0.5f,
-				-0.5f, 0.5f, -0.5f
-		};
-		
-
-		final short[] indices = {
-				0, 1, 2, 0, 2, 3, // front
-				4, 5, 6, 4, 6, 7, // back
-				8, 9, 10, 8, 10, 11, // top
-				12, 13, 14, 12, 14, 15, // bottom
-				16, 17, 18, 16, 18, 19, // right
-				20, 21, 22, 20, 22, 23 // left
-		};
-
-		mParticleModel = new Model(vertices, null, null, null, indices);
-	}
-	
-	/**
-	 * Sets up a 3d cube
-	 */
-	private void setupGlass() {
-
-		// The 4 vertices (corners of a particle)
-		final float[] vertices = {
-				// Front face
-				-0.5f, -0.5f, 0.5f,
-				0.5f, -0.5f, 0.5f,
-				0.5f, 0.5f, 0.5f,
-				-0.5f, 0.5f, 0.5f,
-
-				// Back face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f, 0.5f, -0.5f,
-				0.5f, 0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-
-				// Bottom face
-				-0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f, -0.5f,
-				0.5f, -0.5f, 0.5f,
-				-0.5f, -0.5f, 0.5f,
-
-				// Right face
-				0.5f, -0.5f, -0.5f,
-				0.5f, 0.5f, -0.5f,
-				0.5f, 0.5f, 0.5f,
-				0.5f, -0.5f, 0.5f,
-
-				// Left face
-				-0.5f, -0.5f, -0.5f,
-				-0.5f, -0.5f, 0.5f,
-				-0.5f, 0.5f, 0.5f,
-				-0.5f, 0.5f, -0.5f
-		};
-		
-		final float[] normals = {
-				// Front face
-				0f, 0f, 1f,
-				0f, 0f, 1f,
-				0f, 0f, 1f,
-				0f, 0f, 1f,
-
-				// Back face
-				0f, 0f, -1f,
-				0f, 0f, -1f,
-				0f, 0f, -1f,
-				0f, 0f, -1f,
-
-				// Bottom face
-				0f, -1f, 0f,
-				0f, -1f, 0f,
-				0f, -1f, 0f,
-				0f, -1f, 0f,
-
-				// Right face
-				1f, 0f, 0f,
-				1f, 0f, 0f,
-				1f, 0f, 0f,
-				1f, 0f, 0f,
-
-				// Left face
-				-1f, 0f, 0f,
-				-1f, 0f, 0f,
-				-1f, 0f, 0f,
-				-1f, 0f, 0f,
-		};
-
-		final short[] indices = {
-				0, 1, 2, 0, 2, 3, // front
-				4, 5, 6, 4, 6, 7, // back
-				8, 9, 10, 8, 10, 11,// bottom
-				12, 13, 14, 12, 14, 15, // right
-				16, 17, 18, 16, 18, 19, // left
-		};
-
-		mGlassModel = new Model(vertices, normals, null, null, indices);
-	}
-
-	/**
-	 * Sets up a square
-	 */
-	private void setupSquare() {
-
-		// The 4 vertices (corners of a particle)
-		final float[] vertices = {
-				// Front face
-				-0.5f, -0.5f, 0.5f,
-				0.5f, -0.5f, 0.5f,
-				0.5f, 0.5f, 0.5f,
-				-0.5f, 0.5f, 0.5f,
-		};
-
-		final short[] indices = {
-				0, 1, 2,
-				2, 3, 0
-		};
-
-		mParticleModel = new Model(vertices, null, null, null, indices);
-	}
+	void initReflectionObj()
+	 {
+		glUseProgram(reflectionProgram);
+		glUniform1i(glGetUniformLocation(reflectionProgram, "cubeMap"), 16); //Texture unit 16: skybox
+	 }
 
 	/**
 	 * Draws liquid depending on mode
-	 * @param liquid the liquid to draw
 	 */
 	public void drawLiquid() {
-		if (mLiquid.drawMode() == Liquid.DRAW_PARTICLES) {
+		switch(mLiquid.drawMode()){
+		case Liquid.DRAW_PARTICLES:
 			drawParticles();
-		}
-		else if (mLiquid.drawMode() == Liquid.DRAW_SURFACE) {
+			break;
+		case Liquid.DRAW_SURFACE:
 			drawLiquid(mLiquid.getGrid());
-		}
-		else if(mLiquid.drawMode() == Liquid.DRAW_TRIANGLES){
+			break;
+		case Liquid.DRAW_SURFACE_REFLECTED:
+			drawLiquidReflected(mLiquid.getGrid());
+			break;
+		case Liquid.DRAW_TRIANGLES:
 			drawTriangles(mLiquid.getGrid());
+			break;
+		default:
+			drawLiquidReflected(mLiquid.getGrid());
 		}
 	}
 
@@ -269,22 +159,18 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(particleProgram);
 
 		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(particleProgram, "viewMatrix"), true, viewMatrixBuffer);
 		for (Particle particle : mLiquid.getParticleList()) {
 			// Upload modelMatrix to shader
 			Matrix4f modelMatrix = MathUtils.transMatrix(particle.getPosition());
 			modelMatrix.scale(new Vector3f(0.006f, 0.006f, 0.006f));
-			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+			FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
 			modelMatrixBuffer.clear();
 			glUniformMatrix4(glGetUniformLocation(particleProgram, "modelMatrix"), true, modelMatrixBuffer);
 
 			mParticleModel.draw(particleProgram, "in_Position", null, null);
 		}
-		// glDisableVertexAttribArray(0);
-		// glDisableVertexAttribArray(1);
-		// glDisableVertexAttribArray(2);
-		// glBindVertexArray(0);
 		glUseProgram(0);
 	}
 
@@ -296,15 +182,16 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "viewMatrix"), true, viewMatrixBuffer);
 		viewMatrixBuffer.clear();
 
 		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+		FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "modelMatrix"), true, modelMatrixBuffer);
 		modelMatrixBuffer.clear();
 		
+		@SuppressWarnings("unchecked")
 		Vector<MCTriangle> triangles = (Vector<MCTriangle>) (grid.getTriangles().clone());
 		//Debug.println("Triangles " + triangles.size(), Debug.MAX_DEBUG);
 		for (final MCTriangle triangle : triangles) {
@@ -317,18 +204,19 @@ public class LiquidRenderer extends Renderer {
 	}
 	
 	/**
+	 * Draws the liquid without environment mapping
 	 * @param grid
 	 */
 	private void drawLiquid(MCGrid grid){
 		glUseProgram(surfaceProgram);
 
 		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "viewMatrix"), true, viewMatrixBuffer);
 		viewMatrixBuffer.clear();
 
 		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+		FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram, "modelMatrix"), true, modelMatrixBuffer);
 		modelMatrixBuffer.clear();
 		
@@ -343,17 +231,20 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(0);
 	}
 	
+	/**
+	 * Draws the spheres
+	 */
 	private void drawSpheres() {
 		glUseProgram(modelProgram);
 
 		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(modelProgram, "viewMatrix"), true, viewMatrixBuffer);
 		for (CollidableSphere c : mLiquid.getCollidables()) {
 			// Upload modelMatrix to shader
 			Matrix4f modelMatrix = MathUtils.transMatrix(c.getPosition());
 			modelMatrix.scale(new Vector3f(c.getRadius(), c.getRadius(), c.getRadius()));
-			FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+			FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
 			modelMatrixBuffer.clear();
 			glUniformMatrix4(glGetUniformLocation(modelProgram, "modelMatrix"), true, modelMatrixBuffer);
 
@@ -362,6 +253,9 @@ public class LiquidRenderer extends Renderer {
 		glUseProgram(0);
 	}
 	
+	/**
+	 * Draws the glass cube
+	 */
 	private void drawGlass(){
 		glUseProgram(modelProgram);
 		
@@ -372,12 +266,12 @@ public class LiquidRenderer extends Renderer {
 		//glUniform4f(glGetUniformLocation(modelProgram, "color"), 0.2f, 0.2f, 0.2f,0.2f);
 		
 		// Upload viewMAtrix to shader
-		FloatBuffer viewMatrixBuffer = matrix4Buffer(mCamera.getViewMatrix());
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
 		glUniformMatrix4(glGetUniformLocation(modelProgram, "viewMatrix"), true, viewMatrixBuffer);
 		// Upload modelMatrix to shader
 		Matrix4f modelMatrix = MathUtils.transMatrix(b.getPosition());
-		modelMatrix.scale(new Vector3f(b.getSize()+0.04f,b.getSize()+0.04f,b.getSize()+0.04f));
-		FloatBuffer modelMatrixBuffer = matrix4Buffer(modelMatrix);
+		modelMatrix.scale(new Vector3f(b.getSize()+0.05f,b.getSize()+0.05f,b.getSize()+0.05f));
+		FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
 		modelMatrixBuffer.clear();
 		
 		glUniformMatrix4(glGetUniformLocation(modelProgram, "modelMatrix"), true, modelMatrixBuffer);
@@ -385,7 +279,59 @@ public class LiquidRenderer extends Renderer {
 		mGlassModel.draw(modelProgram, "in_Position", "in_Normal", null);
 		
 		glDisable(GL_BLEND);
+		//glDisable(GL_CULL_FACE);
+		glUseProgram(0);
+	}
+	
+	/**
+	 * Draws liquid with environment mapping
+	 * @param grid
+	 */
+	private void drawLiquidReflected(MCGrid grid){
+		glUseProgram(reflectionProgram);
+		glEnable(GL_BLEND);
+		glEnable(GL_CULL_FACE);
+		glBlendFunc(GL_SRC_ALPHA,GL_ONE_MINUS_SRC_ALPHA);
+		glCullFace(GL_BACK);
+		glCullFace(GL_FRONT);
+
+		// Upload viewMAtrix to shader
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
+		glUniformMatrix4(glGetUniformLocation(reflectionProgram, "viewMatrix"), true, viewMatrixBuffer);
+		viewMatrixBuffer.clear();
+
+		Matrix4f modelMatrix = MathUtils.transMatrix(new Vector3f(0, 0, 0));
+		FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
+		glUniformMatrix4(glGetUniformLocation(reflectionProgram, "modelMatrix"), true, modelMatrixBuffer);
+		modelMatrixBuffer.clear();
+		
+		if(grid.getVertexPositions() != null){
+			float[] v = grid.getVertexPositions();
+			short[] i = grid.getIndices();
+			float[] n = grid.getNormals();
+			Model model = new Model(v,n,null,null,i);
+			model.draw(reflectionProgram, "in_Position", "in_Normal", null);
+			model.clear();
+		}
+		glDisable(GL_BLEND);
 		glDisable(GL_CULL_FACE);
+		glUseProgram(0);
+	}
+	
+	private void drawFloor(){
+		glUseProgram(modelProgram);
+
+		// Upload viewMAtrix to shader
+		FloatBuffer viewMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getViewMatrix());
+		glUniformMatrix4(glGetUniformLocation(modelProgram, "viewMatrix"), true, viewMatrixBuffer);
+		
+		// Upload modelMatrix to shader
+		Matrix4f modelMatrix = MathUtils.transMatrix(0.15f,-0.04f,0.15f);
+		modelMatrix.scale(new Vector3f(1, 1, 1));
+		FloatBuffer modelMatrixBuffer = GLUtils.matrix4Buffer(modelMatrix);
+		glUniformMatrix4(glGetUniformLocation(modelProgram, "modelMatrix"), true, modelMatrixBuffer);
+
+		mFloorModel.draw(modelProgram, "in_Position", "in_Normal", null);
 		glUseProgram(0);
 	}
 	
@@ -396,34 +342,53 @@ public class LiquidRenderer extends Renderer {
 
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 		checkKeys();
-		drawLiquid();
+		mSkybox.draw(mCamera.getViewMatrix());
 		drawSpheres();
+		drawFloor();
+		drawLiquid();
 		drawGlass();
 	}
-
+	
+	/**
+	 * Check if any action keys has been pressed
+	 */
 	public void checkKeys(){
-		if(Keyboard.isKeyDown(Keyboard.KEY_1)){
-			mLiquid.setDrawMode(Liquid.DRAW_PARTICLES);
-		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_2)){
-			mLiquid.setDrawMode(Liquid.DRAW_SURFACE);
-		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_3)){
-			mLiquid.setDrawMode(Liquid.DRAW_TRIANGLES);
-		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_RETURN)){
-			if(!mLiquid.isStarted()){
-				mLiquid.setIsStarted(true);
-				synchronized(mLiquid){
-					mLiquid.notify();
-				}
+		
+		while (Keyboard.next()) {
+		    if (Keyboard.getEventKeyState()) {
+		        switch (Keyboard.getEventKey()) {
+		        case Keyboard.KEY_1:
+		        	mLiquid.setDrawMode(Liquid.DRAW_PARTICLES);
+		        	break;
+		        case Keyboard.KEY_2:
+		        	mLiquid.setDrawMode(Liquid.DRAW_SURFACE);
+		        	break;
+		        case Keyboard.KEY_3:
+		        	mLiquid.setDrawMode(Liquid.DRAW_SURFACE_REFLECTED);
+		        	break;
+		        case Keyboard.KEY_4:
+		        	mLiquid.setDrawMode(Liquid.DRAW_TRIANGLES);
+		        	break;
+		        
+				case Keyboard.KEY_RETURN:
+					if (!mLiquid.isStarted()) {
+						mLiquid.setIsStarted(true);
+						synchronized (mLiquid) {
+							mLiquid.notify();
+						}
 
-			}else{
-				mLiquid.setIsStarted(false);
-			}
-
+					} else {
+						mLiquid.setIsStarted(false);
+					}
+					break;
+				
+				case Keyboard.KEY_G:
+					Liquid.setGravity((Vector3f) Liquid.gravity().scale(-1f));
+		        }
+		    }
 		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)){
+		
+		if(Keyboard.isKeyDown(Keyboard.KEY_RSHIFT)){
 			if(Keyboard.isKeyDown(Keyboard.KEY_DOWN)){
 				mLiquid.getGrid().changeIsoLevel("decrease");
 				Debug.println("Isolevel: " + mLiquid.getGrid().getIsoLevel(),Debug.MAX_DEBUG);
@@ -450,14 +415,6 @@ public class LiquidRenderer extends Renderer {
 			vec = MathUtils.multMat4Vec3(rotMat, vec);
 			Liquid.setGravity(vec);
 		}
-		else if(Keyboard.isKeyDown(Keyboard.KEY_G)){
-			Liquid.setGravity((Vector3f) Liquid.gravity().scale(-1f));
-		}
-	}
-	
-	private void setupSphere(){
-		SphereCreator sphere = new SphereCreator(1,20,20);
-		mSphereModel = new Model(sphere.getVertices(),sphere.getNormals(),null,null,sphere.getIndices());
 	}
 
 	
@@ -466,22 +423,30 @@ public class LiquidRenderer extends Renderer {
 		super.init();
 		glEnable(GL_DEPTH_TEST);
 		//Setup cube for particles
-		setupCube();
-		setupSphere();
-		setupGlass();
+		mParticleModel = Shapes.setupCube();
+		mSphereModel = Shapes.setupSphere(1,20,20);
+		mGlassModel = Shapes.setupGlass();
+		mFloorModel = Shapes.setupSquare();
 		Debug.println("CUBE SETUP", Debug.MAX_DEBUG);
 		
 		setupLight();
 		Debug.println("LIGHT SETUP", Debug.MAX_DEBUG);
 		
+		mSkybox = new Skybox();
+		mSkybox.init(mCamera.getProjectionMatrix());
+		
 		//Upload projectionMatrix to shaders
 		glUseProgram(particleProgram);
-		FloatBuffer projectionMatrixBuffer = matrix4Buffer(mCamera.getProjectionMatrix());
+		FloatBuffer projectionMatrixBuffer = GLUtils.matrix4Buffer(mCamera.getProjectionMatrix());
 		glUniformMatrix4(glGetUniformLocation(particleProgram,"projectionMatrix"), true, projectionMatrixBuffer);
 		
 		glUseProgram(surfaceProgram);
 		glUniformMatrix4(glGetUniformLocation(surfaceProgram,"projectionMatrix"), true, projectionMatrixBuffer);
 		uploadLightToShader(surfaceProgram);
+		
+		glUseProgram(reflectionProgram);
+		glUniformMatrix4(glGetUniformLocation(reflectionProgram,"projectionMatrix"), true, projectionMatrixBuffer);
+		uploadLightToShader(reflectionProgram);
 		
 		glUseProgram(modelProgram);
 		glUniformMatrix4(glGetUniformLocation(modelProgram,"projectionMatrix"), true, projectionMatrixBuffer);

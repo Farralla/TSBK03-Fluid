@@ -1,4 +1,4 @@
-import Rendering.LiquidRenderer;
+import rendering.LiquidRenderer;
 import Utils.Debug;
 import Utils.Timer;
 import data_types.Liquid;
@@ -9,9 +9,10 @@ public class Simulation {
 		
 		
 	public static void main(String[] args) throws Exception {
+		
 		Debug.setDebugMode(Debug.MAX_DEBUG);
 		//Initiate Liquid
-		Liquid liquid = new Liquid(1000,0.3f,0.02f,450f);
+		Liquid liquid = new Liquid(1500,0.3f,0.02f,150f);
 		
 		//Initiate renderer
 		LiquidRenderer renderingUnit= new LiquidRenderer(WIDTH,HEIGHT,liquid);

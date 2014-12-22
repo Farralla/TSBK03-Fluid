@@ -15,13 +15,43 @@ import static org.lwjgl.opengl.GL20.glValidateProgram;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.nio.FloatBuffer;
 import java.util.ArrayList;
 
+import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.Display;
+import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
-
+/**
+ * Class that implements different utilities to support LWJGL opengl implementation
+ * @author Martin
+ *
+ */
 public class GLUtils {
+	
+	public static FloatBuffer matrix4Buffer(Matrix4f mat){
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(16);
+		mat.storeTranspose(buffer);
+		buffer.flip();
+		return buffer;
+	}
+	
+	public static FloatBuffer vector3ArrayBuffer(Vector3f[] vArray){
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(vArray.length*3);
+		for(Vector3f v:vArray){
+			v.store(buffer);
+		}
+		buffer.flip();
+		return buffer;
+	}
+	
+	public static FloatBuffer floatArrayBuffer(float[] fArray){
+		FloatBuffer buffer = BufferUtils.createFloatBuffer(fArray.length);
+		buffer.put(fArray);
+		buffer.flip();
+		return buffer;
+	}
 	
 	/**
 	 * Conver array of Vector3f to appended array
@@ -38,6 +68,11 @@ public class GLUtils {
 		return result;
 	}
 	
+	/**
+	 * Converts ArrayList<FloatByte> to float-array
+	 * @param arrayList
+	 * @return
+	 */
 	public static float[] convertToFloatArray(ArrayList<Float> arrayList)
 	{
 	  float[] array = new float[arrayList.size()];
@@ -48,6 +83,11 @@ public class GLUtils {
 	  return array;
 	}
 	
+	/**
+	 * Converts ArrayList<Byte> to byte-array
+	 * @param arrayList
+	 * @return
+	 */
 	public static byte[] convertToByteArray(ArrayList<Byte> arrayList)
 	{
 	  byte[] array = new byte[arrayList.size()];
@@ -58,6 +98,11 @@ public class GLUtils {
 	  return array;
 	}
 	
+	/**
+	 * Converts ArrayList<Short> to short-array
+	 * @param arrayList
+	 * @return
+	 */
 	public static short[] convertToShortArray(ArrayList<Short> arrayList)
 	{
 	  short[] array = new short[arrayList.size()];
@@ -69,7 +114,11 @@ public class GLUtils {
 	}
 	
 	/**
-	 * read and load shaders
+	 * Read and load shaders from file location
+	 * 
+	 * Implementation from guide by Oskar Veerhoek
+	 * https://github.com/OskarVeerhoek/YouTube-tutorials/tree/master/src/utility
+	 * 
 	 * TODO geometry shader support
 	 * @param vertexShaderLocation
 	 * @param fragmentShaderLocation

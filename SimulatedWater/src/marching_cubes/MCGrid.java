@@ -1,7 +1,5 @@
 package marching_cubes;
 
-import java.awt.MultipleGradientPaint;
-import java.security.spec.MGF1ParameterSpec;
 import java.util.ArrayList;
 import java.util.Vector;
 

@@ -1,5 +1,12 @@
 package Utils;
 
+/**
+ * Simple timer utility
+ * use with update
+ * followed by print to print time since last update
+ * @author Martin
+ *
+ */
 public class Timer {
 	private double timeStamp;
 	private double dT;

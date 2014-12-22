@@ -1,4 +1,4 @@
-package Rendering;
+package rendering;
 
 import static Utils.MathUtils.coTangent;
 import static Utils.MathUtils.degreesToRadians;

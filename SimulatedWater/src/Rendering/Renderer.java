@@ -1,24 +1,22 @@
-package Rendering;
+package rendering;
 import static org.lwjgl.opengl.GL11.glClearColor;
 import static org.lwjgl.opengl.GL11.glViewport;
 
-import java.nio.FloatBuffer;
-
-import org.lwjgl.BufferUtils;
 import org.lwjgl.LWJGLException;
 import org.lwjgl.opengl.ContextAttribs;
 import org.lwjgl.opengl.Display;
 import org.lwjgl.opengl.DisplayMode;
-import org.lwjgl.opengl.Drawable;
 import org.lwjgl.opengl.PixelFormat;
-import org.lwjgl.opengl.SharedDrawable;
-import org.lwjgl.util.vector.Matrix4f;
 import org.lwjgl.util.vector.Vector3f;
 
 import Utils.Debug;
 import Utils.Timer;
 
-
+/**
+ * Super class which handles opengl context
+ * and storing of models
+ *
+ */
 public class Renderer implements Runnable{
 	
 	// Setup variables
@@ -37,6 +35,9 @@ public class Renderer implements Runnable{
 		mHEIGHT = HEIGHT;
 	};
 	
+	/**
+	 * Sets up opengl context
+	 */
 	protected void setupOpenGL() {
 		// Setup an OpenGL context with API version 3.2
 		try {
@@ -61,45 +62,24 @@ public class Renderer implements Runnable{
 		glViewport(0, 0, mWIDTH, mHEIGHT);	
 	}
 	
-	protected Drawable getDrawable() throws LWJGLException {
-		return new SharedDrawable(Display.getDrawable());
-	}
-	
-	protected FloatBuffer matrix4Buffer(Matrix4f mat){
-		FloatBuffer buffer = BufferUtils.createFloatBuffer(16);
-		mat.storeTranspose(buffer);
-		buffer.flip();
-		return buffer;
-	}
-	
-	protected FloatBuffer vector3ArrayBuffer(Vector3f[] vArray){
-		FloatBuffer buffer = BufferUtils.createFloatBuffer(vArray.length*3);
-		for(Vector3f v:vArray){
-			v.store(buffer);
-		}
-		buffer.flip();
-		return buffer;
-	}
-	
-	protected FloatBuffer floatArrayBuffer(float[] fArray){
-		FloatBuffer buffer = BufferUtils.createFloatBuffer(fArray.length);
-		buffer.put(fArray);
-		buffer.flip();
-		return buffer;
-	}
-	
-	
+	/**
+	 * Initiates opengl context and loads shaders
+	 * Creates the camera
+	 */
 	protected void init(){
 		setupOpenGL();
 		loadShaders();
 		Debug.println("INITIATED OPENGL", Debug.MAX_DEBUG);
 		//Setup camera
 		mCamera = new Camera();
-		mCamera.init(new Vector3f(0.25f, 0.25f,-0.5f),new Vector3f(0.25f, 0.25f, 0.25f),new Vector3f(0f, 1f, 0f), 90f, mWIDTH/mHEIGHT, 0.0001f, 1000f);
+		mCamera.init(new Vector3f(0.25f, 0.25f,-0.5f),new Vector3f(0.15f, 0.15f, 0.15f),new Vector3f(0f, 1f, 0f), 90f, mWIDTH/mHEIGHT, 0.0001f, 1000f);
 	}
 	
+	/**
+	 * Draw function
+	 */
 	protected void draw(){
-		//To implemented in subclass
+		//To implement in subclass
 	}
 
 	@Override

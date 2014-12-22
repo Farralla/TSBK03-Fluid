@@ -2,7 +2,7 @@ package marching_cubes;
 
 import org.lwjgl.util.vector.Vector3f;
 
-import Rendering.Model;
+import rendering.Model;
 import Utils.GLUtils;
 
 /**

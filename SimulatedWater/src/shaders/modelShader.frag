@@ -37,14 +37,12 @@ void main(void)
 		shadeG += (0.5*diffuse+0.6*specularStrength)*lightSourcesColorArr[i].y; 
 		shadeB += (0.5*diffuse+0.6*specularStrength)*lightSourcesColorArr[i].z; 
 	} 
-	//vec3 color = vec3(0.01,0.05,0.85);
-	//shadeR += color.x;
-	//shadeG += color.y;
-	//shadeB += color.z;
+	vec3 color = vec3(1.5,1.5,1.5);
  
-	shadeR = clamp(shadeR, 0, 1); 
-	shadeG = clamp(shadeG, 0, 1); 
-	shadeB = clamp(shadeB, 0, 1); 
+	shadeR = clamp(shadeR*color.x, 0, 1); 
+	shadeG = clamp(shadeG*color.y, 0, 1); 
+	shadeB = clamp(shadeB*color.z, 0, 1);
+	 
  
 	out_Color = vec4(shadeR, shadeG, shadeB, transparency);
 }

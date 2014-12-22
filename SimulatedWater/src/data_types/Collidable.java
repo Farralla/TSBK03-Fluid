@@ -7,6 +7,7 @@ public abstract class Collidable {
 	protected Vector3f mPosition;
 	protected float mMass;
 	protected float mDensity;
+	protected float mPressure;
 	protected Vector3f mForce;
 	protected Vector3f mVelocity;
 	
@@ -15,8 +16,9 @@ public abstract class Collidable {
 		mForce = new Vector3f();
 		mVelocity = new Vector3f();
 		mRadius = radius;
-		mDensity = 1000f;
-		mMass = 0.00015f;
+		mDensity = 10000000f;
+		mMass = 0.001f;
+		mPressure = 10000000f;
 	}
 	
 	public Collidable(Vector3f position, float radius, float mass, float density) {
@@ -52,6 +54,10 @@ public abstract class Collidable {
 	
 	public float getDensity(){
 		return mDensity;
+	}
+	
+	public float getPressure(){
+		return mPressure;
 	}
 
 }

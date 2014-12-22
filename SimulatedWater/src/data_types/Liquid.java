@@ -4,7 +4,6 @@ import java.util.List;
 import java.util.Random;
 import java.util.Vector;
 
-import marching_cubes.MCCube;
 import marching_cubes.MCGrid;
 
 import org.lwjgl.util.vector.Vector3f;
@@ -24,11 +23,9 @@ public class Liquid {
 	
 	public static final int DRAW_PARTICLES = 0;
 	public static final int DRAW_SURFACE = 1;
-	public static final int DRAW_TRIANGLES = 2;
-	public static final int DRAW_GRID = 3;
-	
-	//Timeout
-	public static final int TIME_OUT = 100; //ms timeout time
+	public static final int DRAW_SURFACE_REFLECTED = 2;
+	public static final int DRAW_TRIANGLES = 3;
+	public static final int DRAW_GRID = 4;
 
 	// drawMode
 	private int mDrawMode = DRAW_SURFACE;
@@ -41,8 +38,8 @@ public class Liquid {
 	private Vector4f mColor;
 	private MCGrid mMCGrid;
 	
-	public static Vector3f g = new Vector3f(0,-20,0); // Gravity
-	public static double dT = 0.01;
+	public static Vector3f g = new Vector3f(0,-8f,0); // Gravity
+	public static double dT = 0.007;
 
 	// Liquid bounds
 	private Boundaries mBoundaries;
@@ -86,6 +83,10 @@ public class Liquid {
 		init();
 	}
 
+	/**
+	 * Initializes all particles, collidables and calc units
+	 * 
+	 */
 	public void init() {
 		Random random = new Random();
 		Particle.setValues();
@@ -138,9 +139,6 @@ public class Liquid {
 	}
 
 	public void update() {
-		
-		
-		
 		Timer timer = new Timer();
 		timer.off();
 		timer.init();
@@ -172,12 +170,10 @@ public class Liquid {
 		timer.println("updated particles");
 		
 		//Update collidable objects
-//		for(CollidableSphere c : mCollidables){
-//			c.update();
-//		}
-		mCollidables.get(0).update();
+		for(CollidableSphere c : mCollidables){
+			c.update();
+		}
 		
-
 		timer.update();
 		timer.println("Collision objects update");
 
@@ -268,6 +264,23 @@ public class Liquid {
 	public static Vector3f gravity() {
 		return new Vector3f(g);
 	}
+	
+	public void setIsStarted(boolean b) {
+		mIsStarted = b;
+		
+	}
+
+	public boolean isStarted() {
+		return mIsStarted;
+	}
+
+	public Vector<CollidableSphere> getCollidables() {
+		return mCollidables;
+	}
+
+	public static void setGravity(Vector3f vec) {
+		g = vec;
+	}
 
 	public class Boundaries {
 		public String type;
@@ -280,6 +293,10 @@ public class Liquid {
 		public float yHigh;
 		public float zLow;
 		public float zHigh;
+		
+		private float mass = 0.001f;
+		private float density = 1000f;
+		private float pressure = 10000000f;
 
 		private boolean mSideConstraintsOn = true;
 
@@ -319,6 +336,18 @@ public class Liquid {
 
 		public void setSideConstraintsOn(boolean b) {
 			mSideConstraintsOn = b;
+		}
+		
+		public float getMass(){
+			return this.mass;
+		}
+		
+		public float getDensity(){
+			return this.density;
+		}
+		
+		public float getPressure(){
+			return this.pressure;
 		}
 	}
 
@@ -382,22 +411,9 @@ public class Liquid {
 			return run;
 		}
 		
-	}
-
-	public void setIsStarted(boolean b) {
-		mIsStarted = b;
+		public int getId(){
+			return mId;
+		}
 		
-	}
-
-	public boolean isStarted() {
-		return mIsStarted;
-	}
-
-	public Vector<CollidableSphere> getCollidables() {
-		return mCollidables;
-	}
-
-	public static void setGravity(Vector3f vec) {
-		g = vec;
 	}
 }

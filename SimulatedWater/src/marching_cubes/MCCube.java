@@ -6,7 +6,6 @@ import java.util.Vector;
 
 import org.lwjgl.util.vector.Vector3f;
 
-import Utils.Debug;
 import Utils.MathUtils;
 import data_types.Particle;
 
