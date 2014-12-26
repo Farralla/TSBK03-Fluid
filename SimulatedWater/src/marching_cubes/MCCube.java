@@ -34,7 +34,6 @@ public class MCCube {
 	private HashMap<Integer, MCCube> mNeighbours;
 	private Vector<Particle> mParticleList;
 	private Vector<MCCube> mCubesInRange;
-	private Vector<MCCube> m3by3Neigbourhood;
 	private Vector<MCVoxel> mVoxelsInRange;
 
 	public MCCube() {
@@ -81,7 +80,6 @@ public class MCCube {
 		mParticleList = new Vector<Particle>();
 		mNeighbours = new HashMap<Integer, MCCube>();
 		mVoxelsInRange = new Vector<MCVoxel>();
-		m3by3Neigbourhood = new Vector<MCCube>();
 		mCubesInRange = new Vector<MCCube>();
 
 	}
@@ -272,9 +270,7 @@ public class MCCube {
 	
 	public void resetVoxelValues(){
 		for(int i = 0; i<8;i++){
-			//mValues[i] = 0;
 			mVoxels[i].resetValue();
-			//mValueVectors[i].set(0, 0, 0);
 		}
 	}
 	
@@ -284,7 +280,6 @@ public class MCCube {
 	 * @return
 	 */
 	public Vector3f getPosition(int i){
-		//return mPositions[i];
 		return mVoxels[i].getPosition();
 	}
 	
@@ -308,12 +303,8 @@ public class MCCube {
 	public void addToValue(int i,float val){
 		mVoxels[i].addValue(val);
 	}
-	
-//	public void addToValue(int i,Vector3f val){
-//
-//		mValueVectors[i] = Vector3f.add(mValueVectors[i], val , null);
-//	}
 
+	
 	/**
 	 * Get the nearby cubes inside a range Calculates by 6-agecensy
 	 * 
@@ -579,6 +570,10 @@ public class MCCube {
 		return result;
 	}
 	
+	/**
+	 * Get the voxels of this cube
+	 * @return
+	 */
 	public MCVoxel[] getVoxels(){
 		return mVoxels;
 	}
@@ -599,18 +594,27 @@ public class MCCube {
 		}
 	}
 
+	/**
+	 * Get voxels in nearby range of this cube
+	 * @return
+	 */
 	public synchronized Vector<MCVoxel> getNearbyVoxels(){
 		return mVoxelsInRange;
 	}
 	
+	/**
+	 * Get neighbourhood of MCCubes
+	 * @return
+	 */
 	public synchronized Vector<MCCube> getNearbyCubes(){
 		return mCubesInRange;
 	}
-	
-	public synchronized Vector<MCCube> get3by3Neighbourhood(){
-		return m3by3Neigbourhood;
-	}
 
+	/**
+	 * Calculates neighbourhood of particle. within range
+	 * @param grid The grid which this MCCube is in
+	 * @param range 0,1,2,3,....
+	 */
 	public void calcNeighbourhood(MCGrid grid, int range) {
 		int sideLength = (int) grid.getSideLength();
 		int cubeId = mId;

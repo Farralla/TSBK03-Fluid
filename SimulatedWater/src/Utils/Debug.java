@@ -1,5 +1,10 @@
 package Utils;
 
+/**
+ * Debug class used to print debug messages. 
+ * Has levels which can be used to determine what debug messages that will be printed
+ *
+ */
 public class Debug {
 	public static int MAX_DEBUG = 2;
 	public static int MEDIUM_DEBUG = 1;

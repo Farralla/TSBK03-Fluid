@@ -4,6 +4,11 @@ import static java.lang.Math.pow;
 
 import org.lwjgl.util.vector.Vector3f;
 
+/**
+ * 
+ * Kernel class implements smoothing kernel functionality
+ *
+ */
 public class Kernel {
 	private float h;
 	private float hSq;
@@ -21,7 +26,7 @@ public class Kernel {
 		poly6Constant = (float) (315/(64*Math.PI*pow(h,9)));
 		poly6GradConstant = (float) -(945/(32*Math.PI*pow(h,9)));
 		poly6LapConstant = (float) -(945/(32*Math.PI*pow(h,9)));
-		gaussConstant = (float) (1/(Math.pow(Math.PI, 3/2)*pow(h,3)));
+		gaussConstant = (float) (1/(pow(2*Math.PI*pow(h,2),3/2)));
 		pressureGradConstant = (float) -(45/(Math.PI*pow(h,6)));
 		viscosityLapConstant = (float) (45/(Math.PI*pow(h,6)));
 	}
@@ -42,8 +47,6 @@ public class Kernel {
 	public float W_poly6(Vector3f r_vec){
 		float weight = 0;
 		float r = r_vec.length();
-		//weight = (float) (315/(64*Math.PI*pow(h,9))*(pow((pow(h,2)-pow(r,2)),3)));
-		
 		weight = (float) (poly6Constant*(pow(hSq-pow(r,2),3)));
 		return weight;
 	}
@@ -58,7 +61,6 @@ public class Kernel {
 		Vector3f gradW = new Vector3f(r_vec);
 		float r = r_vec.length();
 		float W = 0;
-		//W = (float) -(945/(32*Math.PI*pow(h,9))*Math.pow((pow(h,2)-pow(r,2)),2));
 		W = (float) (poly6GradConstant*pow((hSq-pow(r,2)),2));
 		
 		gradW.scale(W);
@@ -89,7 +91,7 @@ public class Kernel {
 	public float W_gauss(Vector3f r_vec){
 		float weight = 0;
 		float r = r_vec.length();
-		weight = (float) (gaussConstant*Math.exp(pow(r,2)/hSq));
+		weight = (float) (gaussConstant*Math.exp(pow(r,2)/(2*hSq)));
 		return weight;
 	}
 	

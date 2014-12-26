@@ -23,7 +23,7 @@ public class CollidableSphere extends Collidable {
 		Vector3f acceleration = new Vector3f(0, 0, 0);
 		
 		acceleration = Vector3f.add(
-				(Vector3f) mForce.scale((float) (Liquid.dT / mDensity)),
+				(Vector3f) mForce.scale((float) (1 / mDensity)),
 				(Vector3f) Liquid.gravity().scale(1f),
 				null);
 

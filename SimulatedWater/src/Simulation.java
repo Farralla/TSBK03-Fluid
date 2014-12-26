@@ -23,7 +23,7 @@ public class Simulation {
 		//Timer
 		Timer timer = new Timer();
 		timer.init();
-		timer.off();
+		timer.off(); //Timer is off - No messages will be displayed
 
 		
 		//Initiate Loop

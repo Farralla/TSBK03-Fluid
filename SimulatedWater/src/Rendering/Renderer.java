@@ -85,18 +85,10 @@ public class Renderer implements Runnable{
 	@Override
 	public void run() {
 		init();
-		Timer timer = new Timer();
-		timer.init();
-		timer.off();
 		
 		while(!Display.isCloseRequested()){
-			timer.update();
 			draw();
-			timer.update();
-			timer.println("Redraw ");
-			// Force a maximum FPS of about 30 ----> dT = 1/30 = 0.033
 			Display.sync(30);
-			// Let the CPU synchronize with the GPU if GPU is tagging behind
 			Display.update();
 		}
 		System.exit(0);

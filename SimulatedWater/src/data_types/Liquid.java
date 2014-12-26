@@ -282,6 +282,10 @@ public class Liquid {
 		g = vec;
 	}
 
+	/**
+	 * Boundaries contains boundary information for the Liquid
+	 *
+	 */
 	public class Boundaries {
 		public String type;
 		private Vector3f mPosition;
@@ -296,7 +300,7 @@ public class Liquid {
 		
 		private float mass = 0.001f;
 		private float density = 1000f;
-		private float pressure = 10000000f;
+		private float pressure = 10000f;
 
 		private boolean mSideConstraintsOn = true;
 
@@ -351,6 +355,11 @@ public class Liquid {
 		}
 	}
 
+	/**
+	 * 
+	 * Calculator class implements functionality to do the calculations of SPH on different threads
+	 *
+	 */
 	public class Calculator implements Runnable {
 		public static final int CALC_DENSITIES_PRESSURES = 0;
 		public static final int CALC_FORCES = 1;
